@@ -1,0 +1,10 @@
+Package creation date: Wed May 29 07:31:03 BST 2013
+29/05/2013: Bugfixes for the Makefile for the new "safeGetline" function.  Removal of unneeded variables.
+30/4/2013: Better error handling for badly formed population forcing files, and better cross-platform file support - windows line endings should now work on linux, and other problems should be reported as such. NOTE: Mac endings as of OS9 are the same as linux line endings. So that should work too. (Older Mac OS will still have compatibility problems)
+14/4/2013: Bugfixes to undocumented features.
+3/4/2013: Fixed bug if the GUI where "c" was read incorrectly for MCMC traces.  Fixed a bug in the command line version where "c" was read incorrectly when loading from a population file (a depricated approach).
+1/4/2013: Fixed bug in the "-I" option used as "-I l"
+1/4/2013: infmcmc bug fix where single populations could be inappropriately split (low danger: should be caught later)
+6/3/2013: Version 0.0.4. Minor updates related to compilation problems.
+14/09/2012: Version 0.0.3. Added more complete changelog tracking.
+Pre 14/09/2012: There are many versions that all have the same version number (0.0.2 and below). Please update to the most recent version, as there are undocuemnted issues with older versions.

@@ -1,0 +1,33 @@
+README FOR FINESTRUCTURE
+
+**Always see www.paintmychromosomes.com for up-to-date details. This file may be out of date.**
+
+TOPICS:
+
+1. REQUIREMENTS
+2. INSTALLATION (short version)
+3. FURTHER INFORMATION
+
+1. REQUIREMENTS
+
+Assuming that you are in a Linux environment, you need:
+1. an up-to-date version of the gcc compiler, e.g. "gcc (Ubuntu 4.4.3-4ubuntu5) 4.4.3"
+2. GNU Scientific Development Library, (libgsl0-dev and libgsl0 in Ubuntu, gsl-devel in OpenSUSE) 
+
+There are probably other requirements which are present on most systems by default.  If you encounter any problems let us know.  An up-to-date list of all requirements will be maintained on www.paintmychromosomes.com "fineSTRUCTURE Download" page.
+
+2. INSTALLATION
+
+Briefly:
+
+./configure
+make
+make install #optional
+
+More details are in the INSTALL file.
+
+3. FURTHER INFORMATION
+
+www.paintmychromosomes.com is the place to start for help.  Visit the FAQ page for standard issues.
+
+fineSTRUCTURE is written by Daniel Lawson (dan.lawson@bristol.ac.uk)
