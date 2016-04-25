@@ -122,7 +122,7 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                     if (std::regex_match(donorHaps[0], std::regex("N+"))) {
                         numMissing = numMissing + 0.5;
                         diffVector[2*i] = 0.25;
-                        simVectorPerInd[i] =+ (1/(double)(nSamples-1))/2;
+                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
                     } else {
                         diffVector[2*i] = compareSeqs(recipientHap, donorHaps[0]);
                     }
@@ -130,7 +130,7 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                         numMissing = numMissing + 0.5;
                         // std::cerr << "numMissing: " << numMissing << std::endl;
                         diffVector[(2*i)+1] = 0.25;
-                        simVectorPerInd[i] =+ (1/(double)(nSamples-1))/2;
+                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
                     } else {
                         diffVector[(2*i)+1] = compareSeqs(recipientHap, donorHaps[1]);
                     }
@@ -138,6 +138,10 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                     diffVector[2*i] = compareSeqs(recipientHap, donorHaps[0]);
                     diffVector[(2*i)+1] = diffVector[2*i];
                 }
+                //if (allHaps[i] == "N/N") {
+                //    std::cerr << "simVectorPerInd[i]: " << simVectorPerInd[i] << std::endl;
+                //    std::cerr << "(1/(double)(nSamples-1))/2: " << (1/(double)(nSamples-1))/2 << std::endl;
+                //}
             }
         } else {
             diffVector[2*i] = 1.1; // Comparing with itself - so assigning difference proportion above one as we are not interested in within-individual comparisons
@@ -167,8 +171,14 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
         }
     }
     if(checkSimilaritiesSumToOne(simVectorPerInd) == false) {
+        double sum = 0;
+        for (int i = 0; i < simVectorPerInd.size(); i++) {
+            sum = sum + simVectorPerInd[i];
+        }
+        std::cerr << "sum: " << sum << std::endl;
         print_vector_stream(diffVector, std::cerr);
         print_vector_stream(simVectorPerInd, std::cerr);
+        
     } assert(checkSimilaritiesSumToOne(simVectorPerInd));
     // print_vector_stream(simVectorPerInd, std::cout);
     return simVectorPerInd;
