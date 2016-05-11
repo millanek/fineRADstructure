@@ -11,6 +11,8 @@
 
 #define SUBPROGRAM "paint"
 
+static const int initMissing = 2;
+
 static const char *PAINTSQL_USAGE_MESSAGE =
 "Usage: " BIN " " SUBPROGRAM " [OPTIONS] INPUT.txt\n"
 "Generate a co-ancestry matrix from RAD data\n"
@@ -88,6 +90,16 @@ std::vector<int> findMinDiffIndices(std::vector<double>& diffs, double minDiff) 
 }
 
 
+double sumCoancestryReceivedSoFar(int nSamples, int i, std::vector<std::vector<double> >& coancestryM) {
+    double coancestrySoFarSum = 0;
+    for (int j = 0; j < nSamples; j++) {
+        if (j != i) {
+            coancestrySoFarSum = coancestrySoFarSum + coancestryM[i][j];
+        }
+    }
+    return coancestrySoFarSum;
+}
+
 // For missing recipient assume that is is eqaully similar to all the possible donors
 std::vector<double> getMissingRecipientSimVector(int nSamples, int i) {
     std::vector<double> recipientSimVector(nSamples, 0.0);
@@ -99,12 +111,27 @@ std::vector<double> getMissingRecipientSimVector(int nSamples, int i) {
     return recipientSimVector;
 }
 
+// For missing recipient assume that its similarity to the possible donors is given by the co-ancestry matrix
+std::vector<double> getMissingRecipientSimVector(int nSamples, int i, std::vector<std::vector<double> >& coancestryM, double coancestrySoFarSum) {
+    std::vector<double> recipientSimVector(nSamples, 0.0);
+    for (int j = 0; j < nSamples; j++) {
+        if (j != i) {
+            recipientSimVector[j] = coancestryM[i][j]/coancestrySoFarSum;
+        }
+    }
+    return recipientSimVector;
+}
+
+
 // Divide similarity equally between samples that are the closest - to equal 1 in total
 // For a missing donor, assign similarity 1/(N-1) (N the number of samples), and take a corresponding amount away from all the closest ones
-std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps, const std::string& recipientHap, int thisIndI, int nSamples) {
+std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps, const std::string& recipientHap, int thisIndI, int nSamples, std::vector<std::vector<double> >& coancestryM, int tagsSoFar) {
+    double sumOfCoancestryReceivedSoFar = sumCoancestryReceivedSoFar(nSamples, thisIndI, coancestryM);
+
     if (std::regex_match(recipientHap, std::regex("N+"))) {
 	//std::cerr << "recipientHap is N: " << recipientHap << std::endl;
-        return getMissingRecipientSimVector(nSamples, thisIndI);
+        if (tagsSoFar < initMissing) return getMissingRecipientSimVector(nSamples, thisIndI);
+        else return getMissingRecipientSimVector(nSamples, thisIndI, coancestryM, sumOfCoancestryReceivedSoFar);
     }
     std::vector<double> diffVector(nSamples*2, 0.0); // Proportion of difference between all haplotypes and the recipient
     std::vector<double> simVectorPerInd(nSamples, 0.0);
@@ -122,7 +149,8 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                     if (std::regex_match(donorHaps[0], std::regex("N+"))) {
                         numMissing = numMissing + 0.5;
                         diffVector[2*i] = 0.25;
-                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
+                        if (tagsSoFar < initMissing) simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
+                        else simVectorPerInd[i] += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar)/2;
                     } else {
                         diffVector[2*i] = compareSeqs(recipientHap, donorHaps[0]);
                     }
@@ -130,7 +158,8 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                         numMissing = numMissing + 0.5;
                         // std::cerr << "numMissing: " << numMissing << std::endl;
                         diffVector[(2*i)+1] = 0.25;
-                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
+                        if (tagsSoFar < initMissing) simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
+                        else simVectorPerInd[i] += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar)/2;
                     } else {
                         diffVector[(2*i)+1] = compareSeqs(recipientHap, donorHaps[1]);
                     }
@@ -194,6 +223,23 @@ void incrementMissingRecipient(std::vector<std::vector<double> >& outChunksMatri
     }
 }
 
+// For missing recipient assume that its similarity to possible donors is given by the co-ancestry matrix seen so far
+void incrementMissingRecipientOnCoancestry(std::vector<std::vector<double> >& outChunksMatrix, int i) {
+    int Nindividuals = (int)outChunksMatrix[i].size();
+    double coancestrySoFarSum = 0;
+    for (int j = 0; j < Nindividuals; j++) {
+        if (j != i) {
+            coancestrySoFarSum = coancestrySoFarSum + outChunksMatrix[i][j];
+        }
+    }
+    for (int j = 0; j < Nindividuals; j++) {
+        if (j != i) {
+            outChunksMatrix[i][j] = outChunksMatrix[i][j] + (outChunksMatrix[i][j]/(double)coancestrySoFarSum);
+        }
+    }
+}
+
+
 void checkFieldsStacks(const std::vector<std::string>& fields, int tagsRead) {
     if (fields.size() < 12) {
         if (tagsRead == 0){
@@ -215,17 +261,17 @@ void checkInputType(const std::vector<std::string>& fields, std::string& inputTy
     }
 }
 
-std::vector<double> calulateConcastryTetraploid(const std::vector<std::string>& recipientHaps,const std::vector<std::string>& fields, int i, int numIndividuals) {
+std::vector<double> calulateConcastryTetraploid(const std::vector<std::string>& recipientHaps,const std::vector<std::string>& fields, int i, int numIndividuals, std::vector<std::vector<double> >& outChunksMatrix, int tagsRead) {
     assert(recipientHaps.size() == 4); // Handle make sure this is a correctly formatted tatraploid site
     std::vector<double> recipientSimVector;
     string h1 = recipientHaps[0];
-    std::vector<double> recipientSimVectorH1 = calculateSimilarity(fields, h1, i, numIndividuals);
+    std::vector<double> recipientSimVectorH1 = calculateSimilarity(fields, h1, i, numIndividuals,outChunksMatrix,tagsRead);
     string h2 = recipientHaps[1];
-    std::vector<double> recipientSimVectorH2 = calculateSimilarity(fields, h2, i, numIndividuals);
+    std::vector<double> recipientSimVectorH2 = calculateSimilarity(fields, h2, i, numIndividuals,outChunksMatrix,tagsRead);
     string h3 = recipientHaps[2];
-    std::vector<double> recipientSimVectorH3 = calculateSimilarity(fields, h3, i, numIndividuals);
+    std::vector<double> recipientSimVectorH3 = calculateSimilarity(fields, h3, i, numIndividuals,outChunksMatrix,tagsRead);
     string h4 = recipientHaps[3];
-    std::vector<double> recipientSimVectorH4 = calculateSimilarity(fields, h4, i, numIndividuals);
+    std::vector<double> recipientSimVectorH4 = calculateSimilarity(fields, h4, i, numIndividuals,outChunksMatrix,tagsRead);
     for (int j = 0; j < recipientSimVectorH1.size(); j++) {
         recipientSimVector.push_back((recipientSimVectorH1[j] + recipientSimVectorH2[j] + recipientSimVectorH3[j] + recipientSimVectorH3[j])/4);
     }
@@ -278,6 +324,8 @@ int paintSqlMain(int argc, char** argv) {
     std::ofstream* outChunksMatrixFile = new std::ofstream(outChunksMatrixFileName.c_str());
     string outChunksMatrixPerChrFileName = fileRoot + "_perChr_chunks.out";
     std::ofstream* outChunksMatrixPerChrFile = new std::ofstream(outChunksMatrixPerChrFileName.c_str());
+    string outMissingnessFileName = fileRoot + "_missingness.out";
+    std::ofstream* outMissingnessFile = new std::ofstream(outMissingnessFileName.c_str());
 
     std::vector<std::vector<double> > outChunksMatrix;
     double runtime; double runStart = clock();
@@ -298,6 +346,7 @@ int paintSqlMain(int argc, char** argv) {
     std::cerr << "The file seems to be in a " << inputType << " format" << std::endl;
     int numIndividuals = (int)individuals.size();
     initialize_matrix_double(outChunksMatrix, numIndividuals);
+    std::vector<double> missingness(numIndividuals,0.0);
     
     //std::cerr << "Number of columns: " << fields[11] << std::endl;
     // Lets start going through the tags:
@@ -339,27 +388,31 @@ int paintSqlMain(int argc, char** argv) {
             checkChr(thisChr, chrTagsAndChunks, numIndividuals);
             for (int i = 0; i < fields.size(); i++) {
                 if (fields[i] == "" || std::regex_match(fields[i], Ns) || std::regex_match(fields[i], NsHet)) {
-                    incrementMissingRecipient(outChunksMatrix, i);
+                    missingness[i]++;
+                    if (tagsRead < initMissing)
+                        incrementMissingRecipient(outChunksMatrix, i);
+                    else
+                        incrementMissingRecipientOnCoancestry(outChunksMatrix, i);
                 } else {
                     std::vector<std::string> recipientHaps = split(fields[i], '/');
                     std::vector<double> recipientSimVector;
                     if (opt::bTetraploid) {
-                        recipientSimVector = calulateConcastryTetraploid(recipientHaps, fields, i, numIndividuals);
+                        recipientSimVector = calulateConcastryTetraploid(recipientHaps, fields, i, numIndividuals,outChunksMatrix,tagsRead);
                     } else {
                         assert(recipientHaps.size() < 4);
                         // std::cerr << "recipientHaps.size(): " << recipientHaps.size() << std::endl;
                          // Calculate the coancestry values for this tag
                         if (recipientHaps.size() == 2) {
                             string h1 = recipientHaps[0];
-                            std::vector<double> recipientSimVectorH1 = calculateSimilarity(fields, h1, i, numIndividuals);
+                            std::vector<double> recipientSimVectorH1 = calculateSimilarity(fields, h1, i, numIndividuals,outChunksMatrix, tagsRead);
                             string h2 = recipientHaps[1];
-                            std::vector<double> recipientSimVectorH2 = calculateSimilarity(fields, h2, i, numIndividuals);
+                            std::vector<double> recipientSimVectorH2 = calculateSimilarity(fields, h2, i, numIndividuals,outChunksMatrix,tagsRead);
                             for (int j = 0; j < recipientSimVectorH1.size(); j++) {
                                 recipientSimVector.push_back((recipientSimVectorH1[j] + recipientSimVectorH2[j])/2);
                             }
                         } else {
                             string homHap = recipientHaps[0]; // This individual recipient is homozygous
-                            recipientSimVector = calculateSimilarity(fields, homHap, i, numIndividuals);
+                            recipientSimVector = calculateSimilarity(fields, homHap, i, numIndividuals,outChunksMatrix,tagsRead);
                             //std::cerr << "recipientSimVector problem here? " << recipientSimVector[0] << std::endl;
                         }
                     }
@@ -377,10 +430,20 @@ int paintSqlMain(int argc, char** argv) {
             }
         }
     }
+    // Print results:
     std::cerr << "Printing the final coancestry matrix to " << outChunksMatrixFileName << std::endl;
     *outChunksMatrixFile << "#Cfactor " << (1.0/(numIndividuals-1))*((tagsRead/5000)+1) << std::endl;
     *outChunksMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
     print_matrix_wNames(outChunksMatrix, *outChunksMatrixFile,individuals);
+    
+    // Print missingess:
+    for (int i = 0; i < missingness.size(); i++) {
+        missingness[i] = missingness[i]/tagsRead;
+    }
+    
+    std::cerr << "Printing missingness per individual to: " << outMissingnessFileName << std::endl;
+    print_vector(individuals, *outMissingnessFile);
+    print_vector(missingness, *outMissingnessFile);
     
     if (opt::bOutputChr) {
         std::cerr << "Printing the per chromosome coancestry matrices to " << outChunksMatrixPerChrFileName << std::endl;
