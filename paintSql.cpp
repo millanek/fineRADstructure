@@ -284,16 +284,6 @@ void incrementMissingRecipientOnCoancestry(std::vector<std::vector<double> >& ou
 }
 
 
-void checkFieldsStacks(const std::vector<std::string>& fields, int tagsRead) {
-    if (fields.size() < 12) {
-        if (tagsRead == 0){
-            std::cerr << "The input file seems malformed (less than 12 columns)" << std::endl; exit(1);
-        } else {
-            exit(0); // Assume all tags have been read and these are just the additional lines at the bottom of the file
-        }
-    }
-}
-
 void checkInputType(const std::vector<std::string>& fields, std::string& inputType) {
     if (fields[2] == "Chr") {
         inputType = "Stacks";
@@ -402,10 +392,24 @@ int paintSqlMain(int argc, char** argv) {
         if (tagsRead % 100 == 0 && tagsRead > 0) {
             std::cerr << "Processed: " << tagsRead << " tag loci" << std::endl;
         }
-        std::vector<std::string> fields = split(line, '\t');
+        
+        std::vector<std::string> fields;
+        
         if (inputType == "Stacks") {
+            if (line.length() > 0) {
+                fields = split(line, '\t');
+            } else {
+                if (tagsRead > 1) break;
+                else { std::cerr << "The input file seems malformed (empty first line)" << std::endl; exit(1); }
+            }
             thisChr = fields[2];
-            checkFieldsStacks(fields,tagsRead);
+            if (fields.size() < 12) {
+                if (tagsRead == 0){
+                    std::cerr << "The input file seems malformed (less than 12 columns)" << std::endl; exit(1);
+                } else {
+                    break; // Assume all tags have been read and these are just the additional lines at the bottom of the file
+                }
+            }
             fields.erase(fields.begin(), fields.begin()+12);
         } else if (inputType == "Matrix") {
             thisChr = fields[0];
@@ -493,7 +497,7 @@ int paintSqlMain(int argc, char** argv) {
     *outChunksMatrixFile << "#Cfactor " << (1.0/(numIndividuals-1))*((tagsRead/5000)+1) << std::endl;
     *outChunksMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
     print_matrix_wNames(outChunksNoMissing, *outChunksMatrixFile,individuals);
-    //print_matrix_wNames(chunksNoMissingRescaled, *outChunksMatrixFile,individuals);
+    print_matrix_wNames(chunksNoMissingRescaled, *outChunksMatrixFile,individuals);
     
     // If requested, print the alternative results with missigng data treated differently
     if (opt::bMissing2) {
