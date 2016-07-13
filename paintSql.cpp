@@ -494,10 +494,10 @@ int paintSqlMain(int argc, char** argv) {
     }
     // Print results:
     std::cerr << "Printing the final coancestry matrix to " << outChunksMatrixFileName << std::endl;
-    *outChunksMatrixFile << "#Cfactor " << (1.0/(numIndividuals-1))*((tagsRead/5000)+1) << std::endl;
+    *outChunksMatrixFile << "#Cfactor " << 2*((1.0/(numIndividuals-1))*((tagsRead/5000)+1)) << std::endl;
     *outChunksMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
     print_matrix_wNames(outChunksNoMissing, *outChunksMatrixFile,individuals);
-    print_matrix_wNames(chunksNoMissingRescaled, *outChunksMatrixFile,individuals);
+    // print_matrix_wNames(chunksNoMissingRescaled, *outChunksMatrixFile,individuals);
     
     // If requested, print the alternative results with missigng data treated differently
     if (opt::bMissing2) {
