@@ -196,7 +196,7 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                     diffVector[(2*i)+1] = compareSeqs(recipientHap, donorHaps[1]);
                 }
             } else {
-                if (allHaps[i] == "" || std::regex_match(allHaps[i], std::regex("N+"))) {
+                if (allHaps[i] == "" || allHaps[i] == " " || std::regex_match(allHaps[i], std::regex("N+"))) {
                     numMissing = numMissing + 1; missingnessMatrix[thisIndI][i] += (1.0/numRecipientHaps);
                     diffVector[2*i] = 0.25;
                     diffVector[(2*i)+1] = diffVector[2*i];
@@ -442,7 +442,7 @@ int paintSqlMain(int argc, char** argv) {
         if (!bIndTriallelic) {
             checkChr(thisChr, chrTagsAndChunks, numIndividuals);
             for (int i = 0; i < fields.size(); i++) {
-                if (fields[i] == "" || std::regex_match(fields[i], Ns) || std::regex_match(fields[i], NsHet)) {
+                if (fields[i] == "" || fields[i] == " " || std::regex_match(fields[i], Ns) || std::regex_match(fields[i], NsHet)) {
                     missingness[i]++; incrementMissingessMatrixBothHaplotypes(missingnessMatrix, i);
                     if (tagsRead < initMissing)
                         incrementMissingRecipient(outChunksMatrix, i);
