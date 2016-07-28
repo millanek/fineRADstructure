@@ -412,9 +412,11 @@ int paintSqlMain(int argc, char** argv) {
             }
             fields.erase(fields.begin(), fields.begin()+12);
         } else if (inputType == "Matrix") {
+            fields = split(line, '\t');
             thisChr = fields[0];
             fields.erase(fields.begin());
         } else if (inputType == "SimpleMatrix") {
+            fields = split(line, '\t');
             thisChr = "";
         }
         
@@ -422,7 +424,12 @@ int paintSqlMain(int argc, char** argv) {
         if (numIndividuals == fields.size() + 1) {
             fields.push_back("");
         }
-        // std::cerr << "fields.size(): " << fields.size() << " numIndividuals:" << numIndividuals << std::endl;
+        
+        if (fields.size() != numIndividuals) {
+            std::cerr << "fields.size(): " << fields.size() << " numIndividuals:" << numIndividuals << std::endl;
+            std::cerr << "tagsRead: " << tagsRead << std::endl;
+           // std::cerr << line << std::endl;
+        }
         assert(fields.size() == numIndividuals);
         for (int i = 0; i < fields.size(); i++) {
             std::vector<std::string> recipientHaps = split(fields[i], '/');

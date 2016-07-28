@@ -32,7 +32,7 @@ using std::string;
 #define BUGREPORT "mm812@cam.ac.uk"
 #define GZIP_EXT ".gz"
 #define THIS_AUTHOR "Milan Malinsky"
-#define V "0.1"
+#define V "0.1 r100"
 
 
 std::vector<std::string> split(const std::string &s, char delim);
