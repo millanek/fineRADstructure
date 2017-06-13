@@ -29,10 +29,10 @@
 using std::string;
 
 #define BIN "RADpainter"
-#define BUGREPORT "mm812@cam.ac.uk"
+#define BUGREPORT "milan.malinsky@unibas.ch"
 #define GZIP_EXT ".gz"
 #define THIS_AUTHOR "Milan Malinsky"
-#define V "0.1 r100"
+#define V "0.1 r101"
 
 
 std::vector<std::string> split(const std::string &s, char delim);

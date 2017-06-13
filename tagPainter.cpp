@@ -9,7 +9,7 @@
 #include "paintSql.h"
 #include "utils.h"
 
-
+ 
 
 static const char *VERSION_MESSAGE =
 "RADPainter Version " V "\n"
