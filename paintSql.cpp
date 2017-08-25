@@ -688,15 +688,6 @@ int paintSqlMain(int argc, char** argv) {
     
     //print_matrix_wNames(chunksNoMissingRescaled, *outChunksMatrixFile,individuals);
     
-    // If requested, print the alternative results with missigng data treated differently
-    if (opt::bMissing2) {
-        string outChunksMatrixMissingess2FileName = fileRoot + "_missingness2_chunks.out";
-        std::ofstream* outChunksMatrixMissingess2File = new std::ofstream(outChunksMatrixMissingess2FileName.c_str());
-        *outChunksMatrixMissingess2File << "#Cfactor " << (1.0/(numIndividuals-1))*((tagsRead/5000)+1) << std::endl;
-        *outChunksMatrixMissingess2File << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
-        print_matrix_wNames(outChunksMatrix, *outChunksMatrixMissingess2File,individuals);
-    }
-    
     // Print missingess:
     for (int i = 0; i < missingness.size(); i++) {
         missingness[i] = missingness[i]/tagsRead;
@@ -780,6 +771,17 @@ int paintSqlMain(int argc, char** argv) {
     *outChunksMatrixFile << "#Cfactor " << jackknifeC << std::endl;
     *outChunksMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
     print_matrix_wNames(outChunksNoMissing, *outChunksMatrixFile,individuals);
+    
+    
+    // If requested, print the alternative results with missigng data treated differently
+    if (opt::bMissing2) {
+        string outChunksMatrixMissingess2FileName = fileRoot + "_missingness2_chunks.out";
+        std::ofstream* outChunksMatrixMissingess2File = new std::ofstream(outChunksMatrixMissingess2FileName.c_str());
+        *outChunksMatrixMissingess2File << "#Cfactor " << jackknifeC << std::endl;
+        *outChunksMatrixMissingess2File << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
+        print_matrix_wNames(outChunksMatrix, *outChunksMatrixMissingess2File,individuals);
+    }
+
     
     
     // If requested, print the per-chromosome results
