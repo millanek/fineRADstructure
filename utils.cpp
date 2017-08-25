@@ -30,6 +30,7 @@ void initialize_matrix_double(std::vector<std::vector<double> >& m, int m_size) 
     }
 }
 
+
 // Initialize a matrix
 void initialize_matrix_int(std::vector<std::vector<int> >& m, int m_size) {
     for (int i = 0; i < m_size; i++) {

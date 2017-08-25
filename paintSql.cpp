@@ -50,6 +50,10 @@ namespace opt
 // Just recording where either donor or recipient are "missing data"
 static std::vector<std::vector<double> > outChunksNoMissing;
 static std::vector<std::vector<double> > missingnessMatrix;
+static std::vector<std::vector<double> > localChunksNoMissing;
+static std::vector<std::vector<double> > localMissingnessMatrix;
+
+
 void incrementMissingessMatrixBothHaplotypes(std::vector<std::vector<double> >& missingnessMatrix, int i) {
     int Nindividuals = (int)missingnessMatrix[i].size();
     for (int j = 0; j < Nindividuals; j++) {
@@ -149,6 +153,24 @@ std::vector<double> getMissingRecipientSimVector(int nSamples, int i, std::vecto
 }
 
 
+
+bool checkIfTagInformative(const std::vector<std::string>& fields) {
+    int missing = 0;
+    std::regex Ns("N+");
+    std::regex NsHet("N+/N+");
+    for (int i = 0; i < fields.size(); i++) {
+        if (fields[i] == "" || fields[i] == " " || std::regex_match(fields[i], Ns) || std::regex_match(fields[i], NsHet)) {
+            missing++;
+        }
+    }
+    if (missing >= fields.size() - 1) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
 // Divide similarity equally between samples that are the closest - to equal 1 in total
 // For a missing donor, assign similarity 1/(N-1) (N the number of samples), and take a corresponding amount away from all the closest ones
 std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps, const std::string& recipientHap, int thisIndI, int nSamples, std::vector<std::vector<double> >& coancestryM, int tagsSoFar, int numRecipientHaps) {
@@ -157,23 +179,32 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
     if (std::regex_match(recipientHap, std::regex("N+"))) {
 	//std::cerr << "recipientHap is N: " << recipientHap << std::endl;
         incrementMissingessMatrixOneHaplotype(missingnessMatrix, thisIndI);
+        incrementMissingessMatrixOneHaplotype(localMissingnessMatrix, thisIndI);
         if (tagsSoFar < initMissing) return getMissingRecipientSimVector(nSamples, thisIndI);
         else return getMissingRecipientSimVector(nSamples, thisIndI, coancestryM, sumOfCoancestryReceivedSoFar);
     }
     std::vector<double> diffVector(nSamples*2, 0.0); // Proportion of difference between all haplotypes and the recipient
     std::vector<double> simVectorPerInd(nSamples, 0.0);
+    std::vector<double> simVectorPerIndNoMissing(nSamples, 0.0);
+    std::vector<double> thisMissing(nSamples, 0.0);
     double numMissing = 0;
     double totalToMissing = 0;
+    double thisMissingBasic = 0;
+    const double missingRandomDiff = 1-pow(0.25,recipientHap.length());
+    assert(nSamples == allHaps.size());
     for (int i = 0; i < allHaps.size(); i++) {
         if (i != thisIndI) {
             std::vector<std::string> donorHaps = split(allHaps[i], '/');
             assert(donorHaps.size() < 3);
             if (donorHaps.size() == 2) {
                 if (std::regex_match(donorHaps[0], std::regex("N+"))) {
-                    numMissing = numMissing + 0.5; missingnessMatrix[thisIndI][i] += (1.0/numRecipientHaps)/2;
-                    diffVector[2*i] = 0.25;
+                    numMissing = numMissing + 0.5;
+                    thisMissing[i] += (1.0/numRecipientHaps)/2;
+                    diffVector[2*i] = missingRandomDiff;
+                    thisMissingBasic = thisMissingBasic + (1/(double)(nSamples-1))/2;
                     if (tagsSoFar < initMissing) {
-                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2; totalToMissing += (1/(double)(nSamples-1))/2;
+                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
+                        totalToMissing += (1/(double)(nSamples-1))/2;
                     } else {
                         simVectorPerInd[i] += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar)/2;
                         totalToMissing += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar)/2;
@@ -183,11 +214,13 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                     // outChunksNoMissing[thisIndI]
                 }
                 if (std::regex_match(donorHaps[1], std::regex("N+"))) {
-                    numMissing = numMissing + 0.5; missingnessMatrix[thisIndI][i] += (1.0/numRecipientHaps)/2;
+                    numMissing = numMissing + 0.5; thisMissing[i] += (1.0/numRecipientHaps)/2;
                     // std::cerr << "numMissing: " << numMissing << std::endl;
-                    diffVector[(2*i)+1] = 0.25;
+                    diffVector[(2*i)+1] = missingRandomDiff;
+                    thisMissingBasic = thisMissingBasic + (1/(double)(nSamples-1))/2;
                     if (tagsSoFar < initMissing) {
-                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2; totalToMissing += (1/(double)(nSamples-1))/2;
+                        simVectorPerInd[i] += (1/(double)(nSamples-1))/2;
+                        totalToMissing += (1/(double)(nSamples-1))/2;
                     } else {
                         simVectorPerInd[i] += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar)/2;
                         totalToMissing += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar)/2;
@@ -197,11 +230,12 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
                 }
             } else {
                 if (allHaps[i] == "" || allHaps[i] == " " || std::regex_match(allHaps[i], std::regex("N+"))) {
-                    numMissing = numMissing + 1; missingnessMatrix[thisIndI][i] += (1.0/numRecipientHaps);
-                    diffVector[2*i] = 0.25;
-                    diffVector[(2*i)+1] = diffVector[2*i];
+                    numMissing = numMissing + 1; thisMissing[i] += (1.0/numRecipientHaps);
+                    diffVector[2*i] = missingRandomDiff; diffVector[(2*i)+1] = diffVector[2*i];
+                    thisMissingBasic = thisMissingBasic + (1/(double)(nSamples-1));
                     if (tagsSoFar < initMissing) {
-                        simVectorPerInd[i] += (1/(double)(nSamples-1)); totalToMissing += (1/(double)(nSamples-1));
+                        simVectorPerInd[i] += (1/(double)(nSamples-1));
+                        totalToMissing += (1/(double)(nSamples-1));
                     } else {
                         simVectorPerInd[i] += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar);
                         totalToMissing += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar);
@@ -219,27 +253,61 @@ std::vector<double> calculateSimilarity(const std::vector<std::string>& allHaps,
     // Find the smallest diff:
     double minDiff = *std::min_element(diffVector.begin(),diffVector.end());
     int numClosest = (int)std::count(diffVector.begin(),diffVector.end(), minDiff);
-    //std::cerr << "thisIndI: " << thisIndI << std::endl;
-    //std::cerr << "numClosest: " << numClosest << std::endl;
     std::vector<int> indicesMin = findMinDiffIndices(diffVector, minDiff);
     assert(numClosest == indicesMin.size());
+    double subtractFromClosestNoMissing;
+    if (totalToMissing > 0) { assert(minDiff <= missingRandomDiff);}
+    if (minDiff < missingRandomDiff) {
+        for (int i = 0; i < nSamples; i++) {
+            missingnessMatrix[thisIndI][i] += thisMissing[i];
+            localMissingnessMatrix[thisIndI][i] += thisMissing[i];
+        }
+        subtractFromClosestNoMissing = totalToMissing/(double)numClosest; // Take this away from the closest (assigned to missing)
+    } else {
+        // the missing ones are actually the "closest"
+        subtractFromClosestNoMissing = 0;
+    }
+    double subtractFromClosest = totalToMissing/(double)numClosest; // Take this away from the closest (assigned to missing)
+    //std::cerr << "thisIndI: " << thisIndI << std::endl;
+    //std::cerr << "numClosest: " << numClosest << std::endl;
     //std::cerr << "numMissing: " << numMissing << std::endl;
     
     // Fill in the per-individual co-ancestry vector
     //std::cerr << "totalToMissing: " << totalToMissing << std::endl;
-    double subtractFromClosest = totalToMissing/(double)numClosest; // Take this away from the closest (assigned to missing)
     double add = (1/(double)numClosest) - subtractFromClosest;
+    double addNoMissing = (1/(double)numClosest) - subtractFromClosestNoMissing;
     //std::cerr << "add: " << add << std::endl;
     for (int i = 0; i < simVectorPerInd.size(); i++) {
         if (std::find(indicesMin.begin(), indicesMin.end(), 2*i) != indicesMin.end()) {
-            simVectorPerInd[i] = simVectorPerInd[i] + add;
-            outChunksNoMissing[thisIndI][i] += add/numRecipientHaps;
+            //if (thisMissing[i] != 1) {
+            simVectorPerInd[i] += add;
+            simVectorPerIndNoMissing[i] += addNoMissing;
+            outChunksNoMissing[thisIndI][i] += addNoMissing;
+            localChunksNoMissing[thisIndI][i] += addNoMissing;
+            //}
         }
         if (std::find(indicesMin.begin(), indicesMin.end(), (2*i)+1) != indicesMin.end()) {
-            simVectorPerInd[i] = simVectorPerInd[i] + add;
-            outChunksNoMissing[thisIndI][i] += add/numRecipientHaps;
+            simVectorPerInd[i] += add;
+            simVectorPerIndNoMissing[i] += addNoMissing;
+            outChunksNoMissing[thisIndI][i] += addNoMissing;
+            localChunksNoMissing[thisIndI][i] += addNoMissing;
         }
     }
+    
+    if (minDiff == missingRandomDiff) {
+        //std::cerr << "thisIndI: " << thisIndI << std::endl;
+        if(checkSimilaritiesSumToOne(simVectorPerIndNoMissing) == false) {
+            double sum = 0;
+            for (int i = 0; i < simVectorPerIndNoMissing.size(); i++) {
+                sum = sum;
+            }
+            std::cerr << "sum: " << sum << std::endl;
+            print_vector_stream(diffVector, std::cerr);
+            print_vector_stream(simVectorPerIndNoMissing, std::cerr);
+            
+        } assert(checkSimilaritiesSumToOne(simVectorPerIndNoMissing));
+    }
+    
     if(checkSimilaritiesSumToOne(simVectorPerInd) == false) {
         double sum = 0;
         for (int i = 0; i < simVectorPerInd.size(); i++) {
@@ -282,6 +350,25 @@ void incrementMissingRecipientOnCoancestry(std::vector<std::vector<double> >& ou
         }
     }
 }
+
+// For missing recipient assume that its similarity to possible donors is given by the co-ancestry matrix seen so far
+void incrementMissingRecipientOnCoancestryLocal(std::vector<std::vector<double> >& outChunksMatrix, std::vector<std::vector<double> >& localChunksMatrix, int i) {
+    int Nindividuals = (int)outChunksMatrix[i].size();
+    double coancestrySoFarSum = 0;
+    for (int j = 0; j < Nindividuals; j++) {
+        if (j != i) {
+            coancestrySoFarSum = coancestrySoFarSum + outChunksMatrix[i][j];
+        }
+    }
+    assert(coancestrySoFarSum == vector_sum(outChunksMatrix[i]));
+    for (int j = 0; j < Nindividuals; j++) {
+        if (j != i) {
+            localChunksMatrix[i][j] = localChunksMatrix[i][j] + (outChunksMatrix[i][j]/(double)coancestrySoFarSum);
+        }
+    }
+}
+
+
 
 
 void checkInputType(const std::vector<std::string>& fields, std::string& inputType) {
@@ -345,6 +432,19 @@ void addChunksToChr(const std::string& thisChr, AllPerChrData& chrTagsAndChunks,
 }
 
 
+void addChunksToLocalMatrix(const std::string& thisChr, AllPerChrData& chrTagsAndChunks, const std::vector<double>& recipientSimVector, int numIndividuals, int i) {
+    if (thisChr != "") {
+        assert(chrTagsAndChunks.chunksMatrixPerChr.count(thisChr) == 1);
+        for (int j = 0; j < recipientSimVector.size(); j++) {
+            chrTagsAndChunks.chunksMatrixPerChr[thisChr][i][j] = chrTagsAndChunks.chunksMatrixPerChr[thisChr][i][j] + recipientSimVector[j];
+        }
+    } else {
+        
+    }
+}
+
+
+
 int paintSqlMain(int argc, char** argv) {
     parsePaintSqlOptions(argc, argv);
     string inputType;
@@ -358,12 +458,24 @@ int paintSqlMain(int argc, char** argv) {
     std::ofstream* outChunksMatrixFile = new std::ofstream(outChunksMatrixFileName.c_str());
     string outMissingnessFileName = fileRoot + "_missingness.out";
     std::ofstream* outMissingnessFile = new std::ofstream(outMissingnessFileName.c_str());
+    string outMissingnessMatrixFileName = fileRoot + "_missingnessMatrix.out";
+    std::ofstream* outMissingnessMatrixFile = new std::ofstream(outMissingnessMatrixFileName.c_str());
 
     std::vector<std::vector<double> > outChunksMatrix;
     double runtime; double runStart = clock();
     
     // Some variables for c calculations
     string thisChr; AllPerChrData chrTagsAndChunks;
+    std::vector<std::vector<double>> localChunkMatrix;
+    std::vector<std::vector<double>> empiricalVariancesMatrix; std::vector<std::vector<double>> empiricalVariancesPaper;
+    std::vector<std::vector<double>> theoreticalVariancesMatrix;
+    std::vector<std::vector<double>> c_ij;
+    std::vector<std::vector<double>> p_ij_full;
+    std::vector<std::vector<double>> s2_ij;
+    std::vector<std::vector<double>> my_empiricalVar;
+    int blockSize = 100;
+    int ploidy = 2;
+    int notInformative = 0;
     
     int tagsRead = 0;
     string line;
@@ -380,8 +492,18 @@ int paintSqlMain(int argc, char** argv) {
     initialize_matrix_double(outChunksMatrix, numIndividuals);
     initialize_matrix_double(outChunksNoMissing, numIndividuals);
     initialize_matrix_double(missingnessMatrix, numIndividuals);
+    BlockCoancestries bC(numIndividuals,numIndividuals);
+    initialize_matrix_double(localChunkMatrix, numIndividuals);
+    initialize_matrix_double(localMissingnessMatrix, numIndividuals);
+    initialize_matrix_double(localChunksNoMissing, numIndividuals);
+    initialize_matrix_double(empiricalVariancesMatrix, numIndividuals);
+    initialize_matrix_double(empiricalVariancesPaper, numIndividuals);
+    initialize_matrix_double(theoreticalVariancesMatrix, numIndividuals);
+    initialize_matrix_double(c_ij, numIndividuals);
+    initialize_matrix_double(p_ij_full, numIndividuals);
+    initialize_matrix_double(s2_ij, numIndividuals);
+    initialize_matrix_double(my_empiricalVar, numIndividuals);
     std::vector<double> missingness(numIndividuals,0.0);
-    
     //std::cerr << "Number of columns: " << fields[11] << std::endl;
     // Lets start going through the tags:
     while (getline(*sqlFile, line)) {
@@ -440,14 +562,24 @@ int paintSqlMain(int argc, char** argv) {
         std::regex Ns("N+");
         std::regex NsHet("N+/N+");
         if (!bIndTriallelic) {
+            if (!checkIfTagInformative(fields)) {
+                notInformative++;
+            }
             checkChr(thisChr, chrTagsAndChunks, numIndividuals);
             for (int i = 0; i < fields.size(); i++) {
                 if (fields[i] == "" || fields[i] == " " || std::regex_match(fields[i], Ns) || std::regex_match(fields[i], NsHet)) {
                     missingness[i]++; incrementMissingessMatrixBothHaplotypes(missingnessMatrix, i);
-                    if (tagsRead < initMissing)
+                    incrementMissingessMatrixBothHaplotypes(localMissingnessMatrix, i);
+                    if (tagsRead < initMissing) {
                         incrementMissingRecipient(outChunksMatrix, i);
-                    else
+                    } else {
                         incrementMissingRecipientOnCoancestry(outChunksMatrix, i);
+                    }
+                    if (tagsRead % blockSize < 2) {
+                        incrementMissingRecipient(localChunkMatrix, i);
+                    } else {
+                        incrementMissingRecipientOnCoancestry(localChunkMatrix, i);
+                    }
                 } else {
                     std::vector<std::string> recipientHaps = split(fields[i], '/');
                     std::vector<double> recipientSimVector;
@@ -479,32 +611,82 @@ int paintSqlMain(int argc, char** argv) {
                     
                     for (int j = 0; j < recipientSimVector.size(); j++) {
                         outChunksMatrix[i][j] = outChunksMatrix[i][j] + recipientSimVector[j];
+                        localChunkMatrix[i][j] = localChunkMatrix[i][j] + recipientSimVector[j];
                     }
                     addChunksToChr(thisChr, chrTagsAndChunks, recipientSimVector, numIndividuals, i);
                 }
             }
         }
+        if (tagsRead % blockSize == 0) {
+            for (int i = 0; i < numIndividuals; i++) {
+                for (int j = 0; j < numIndividuals; j++) {
+                    double local_p_ij = localChunkMatrix[i][j]/vector_sum(localChunkMatrix[i]);
+                    if (tagsRead == blockSize) {
+                        bC.matrix[i][j][0] = localChunkMatrix[i][j];
+                        bC.p_ij_matrix[i][j][0] = local_p_ij;
+                    } else {
+                        bC.matrix[i][j].push_back(localChunkMatrix[i][j]);
+                        bC.p_ij_matrix[i][j].push_back(local_p_ij);
+                    }
+                    if (i != j) {
+                        if (localChunksNoMissing[i][j] != 0) {
+                            // std::cerr << "localChunksNoMissing[i][j] == 0; "  << localChunksNoMissing[i][j] * (1.0/(1-(localMissingnessMatrix[i][j]/blockSize))) << std::endl;
+                            if (localMissingnessMatrix[i][j] == blockSize) {
+                                std::cerr << "localChunksNoMissing[i][j] = "  << localChunksNoMissing[i][j] << std::endl;
+                                std::cerr << "localMissingnessMatrix[i][j] = "  << localMissingnessMatrix[i][j] << std::endl;
+                                std::cerr << "tagsRead; [i]; [j] = "  << tagsRead << "; " << i << "; " << j << std::endl;
+                                std::cerr << "BUG? Need to sort this out!!! Contact: " << BUGREPORT << std::endl;
+                            } else {
+                            // std::cerr << "localMissingnessMatrix[i][j] = "  << localMissingnessMatrix[i][j] << std::endl;
+                                localChunksNoMissing[i][j] = localChunksNoMissing[i][j] * (1.0/(1-(localMissingnessMatrix[i][j]/blockSize)));
+                                localChunksNoMissing[i][j] = (localChunksNoMissing[i][j]/vector_sum(localChunksNoMissing[i])) * blockSize;
+                            }
+                        }
+                        if (tagsRead == blockSize) {
+                            bC.matrixNewMissing[i][j][0] = localChunksNoMissing[i][j];
+                        } else {
+                            bC.matrixNewMissing[i][j].push_back(localChunksNoMissing[i][j]);
+                        }
+                    } else {
+                        if (tagsRead == blockSize) {
+                            bC.matrixNewMissing[i][j][0] = 0.0;
+                        } else {
+                            bC.matrixNewMissing[i][j].push_back(0.0);
+                        }
+                    }
+                }
+            }
+            // Reset the local matrices to all zeros
+            for (int i = 0; i < localChunkMatrix.size(); i++) {
+                std::fill(localChunkMatrix[i].begin(), localChunkMatrix[i].end(), 0.0);
+                std::fill(localMissingnessMatrix[i].begin(), localMissingnessMatrix[i].end(), 0.0);
+                std::fill(localChunksNoMissing[i].begin(), localChunksNoMissing[i].end(), 0.0);
+            }
+        }
     }
-    
     // Add all the missing data:
     std::vector<std::vector<double> > chunksNoMissingRescaled; initialize_matrix_double(chunksNoMissingRescaled, numIndividuals);
     for (int i = 0; i < missingnessMatrix.size(); i++) {
         // Rescale the outChunksNoMissing matrix so that it reflects relative co-ancestry inferred from observed data
         // independent of missingess
         for (int j = 0; j < missingnessMatrix.size(); j++) {
-            chunksNoMissingRescaled[i][j] = outChunksNoMissing[i][j] * (1 + (missingnessMatrix[i][j])/tagsRead);
+            if (i != j) {
+                chunksNoMissingRescaled[i][j] = outChunksNoMissing[i][j] * (1.0/(1-(missingnessMatrix[i][j]/tagsRead)));
+                // old version - BUG!!
+                ///chunksNoMissingRescaled[i][j] = outChunksNoMissing[i][j] * (1 + (missingnessMatrix[i][j])/tagsRead);
+            }
         }
-        double sumThisIndividualReceived = sumCoancestryReceivedSoFar(numIndividuals, i, chunksNoMissingRescaled);
         for (int j = 0; j < missingnessMatrix.size(); j++) {
-            outChunksNoMissing[i][j] = outChunksNoMissing[i][j] + missingnessMatrix[i][j] * (chunksNoMissingRescaled[i][j]/sumThisIndividualReceived);
+            outChunksNoMissing[i][j] = (chunksNoMissingRescaled[i][j]/vector_sum(chunksNoMissingRescaled[i])) * tagsRead;
         }
     }
-    // Print results:
-    std::cerr << "Printing the final coancestry matrix to " << outChunksMatrixFileName << std::endl;
-    *outChunksMatrixFile << "#Cfactor " << 2*((1.0/(numIndividuals-1))*((tagsRead/5000)+1)) << std::endl;
-    *outChunksMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
-    print_matrix_wNames(outChunksNoMissing, *outChunksMatrixFile,individuals);
-    // print_matrix_wNames(chunksNoMissingRescaled, *outChunksMatrixFile,individuals);
+    std::cerr << individuals[0] << "\t" << vector_sum(chunksNoMissingRescaled[0]) << std::endl;
+    std::cerr << individuals[0] << "\t" << vector_sum(outChunksNoMissing[0]) << std::endl;
+    
+    *outMissingnessMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outMissingnessMatrixFile);
+    print_matrix_wNames(missingnessMatrix, *outMissingnessMatrixFile,individuals);
+    
+    //print_matrix_wNames(chunksNoMissingRescaled, *outChunksMatrixFile,individuals);
     
     // If requested, print the alternative results with missigng data treated differently
     if (opt::bMissing2) {
@@ -522,6 +704,83 @@ int paintSqlMain(int argc, char** argv) {
     std::cerr << "Printing missingness per individual to: " << outMissingnessFileName << std::endl;
     print_vector(individuals, *outMissingnessFile);
     print_vector(missingness, *outMissingnessFile);
+    
+    // Estimate theoretical variances:
+    double R_i = tagsRead/blockSize;
+    for (int i = 0; i < numIndividuals; i++) {
+        for (int j = 0; j < numIndividuals; j++) {
+            if (i != j) {
+                double p_ij = outChunksMatrix[i][j]/vector_sum(outChunksMatrix[i]);
+                // std::cerr << individuals[i] << "\t" << vector_sum(outChunksMatrix[i]) << std::endl;
+                p_ij_full[i][j] = p_ij;
+                theoreticalVariancesMatrix[i][j] = (vector_sum(outChunksMatrix[i])*p_ij*(1-p_ij))/R_i;
+            }
+        }
+    }
+    
+    
+    for (int i = 0; i < numIndividuals; i++) {
+        for (int j = 0; j < numIndividuals; j++) {
+            if (i != j) {
+                bC.c_prime_matrix[i][j].resize(bC.matrix[0][0].size(),0.0);
+                for (int k = 0; k < bC.matrix[0][0].size(); k++) {
+                    bC.c_prime_matrix[i][j][k] = outChunksMatrix[i][j] - bC.matrix[i][j][k];
+                    s2_ij[i][j] = s2_ij[i][j] + pow(bC.matrixNewMissing[i][j][k], 2);
+                    my_empiricalVar[i][j] = my_empiricalVar[i][j] + pow(bC.matrix[i][j][k] - (vector_sum(bC.matrix[i][j])/R_i), 2);
+                }
+            }
+        }
+    }
+    
+    
+    // Estimate empirical variances by jackknife:
+    double sumC_ij = 0; double sumC_ij_my = 0;
+    double sumTV_ij = 0; double sumEVpaper = 0;
+    for (int i = 0; i < numIndividuals; i++) {
+        for (int j = 0; j < numIndividuals; j++) {
+            if (i != j) {
+                
+                empiricalVariancesPaper[i][j] = (s2_ij[i][j] - (pow(vector_sum(bC.matrixNewMissing[i][j]), 2)/R_i))/(R_i - 1);
+                my_empiricalVar[i][j] = my_empiricalVar[i][j]/(R_i-1);
+                //empiricalVariancesMatrix[i][j] = pow(jackknive_std_err(bC.matrix[i][j]),2);
+                // empiricalVariancesMatrix[i][j] = pow(jackknive_std_err(bC.c_prime_matrix[i][j]),2);
+                empiricalVariancesMatrix[i][j] = pow(jackknive_std_err_sum(bC.matrixNewMissing[i][j]),2)/(R_i - 1);
+                c_ij[i][j] = empiricalVariancesMatrix[i][j]/theoreticalVariancesMatrix[i][j];
+                sumC_ij = sumC_ij + c_ij[i][j];
+                sumC_ij_my = sumC_ij_my + empiricalVariancesPaper[i][j]/theoreticalVariancesMatrix[i][j];
+                sumTV_ij = sumTV_ij + theoreticalVariancesMatrix[i][j];
+                sumEVpaper = sumEVpaper + empiricalVariancesPaper[i][j];
+            }
+        }
+    }
+    // print_vector_stream(bC.matrix[0][1], std::cerr,',');
+    // std::cerr << "s2_ij[0][1] = " << s2_ij[0][1] << std::endl;
+    // std::cerr << "outChunksMatrix[0][1] = " << outChunksMatrix[0][1] << std::endl;
+    // std::cerr << "my_empiricalVar[0][1] = " << my_empiricalVar[0][1] << std::endl;
+    // std::cerr << "empiricalVariancesPaper[0][1] = " << empiricalVariancesPaper[0][1] << std::endl;
+    // std::cerr << "jackknive_std_err(bC.matrixNewMissing[0][1]) = " << jackknive_std_err(bC.matrix[0][1]) << std::endl;
+    // string outTVarName = fileRoot + "_theoreticalVariances.out";
+    // string outEmpVarName = fileRoot + "_empiricalVariances.out";
+    // std::ofstream* outEmpVarFile = new std::ofstream(outEmpVarName.c_str());
+    // std::ofstream* outTVarFile = new std::ofstream(outTVarName.c_str());
+    // print_vector(individuals, *outEmpVarFile);
+    // print_matrix_wNames(empiricalVariancesMatrix, *outEmpVarFile,individuals);
+    // print_vector(individuals, *outTVarFile);
+    // print_matrix_wNames(theoreticalVariancesMatrix, *outTVarFile,individuals);
+    // std::cerr << "Mean theoretical T_V per block = " << sumTV_ij/(numIndividuals*(numIndividuals-1)) << std::endl;
+    
+    double jackknifeC = sumC_ij/(numIndividuals*(numIndividuals-1));
+    std::cerr << "Theoretical c = " << ploidy * (1.0/(numIndividuals-1)) << std::endl;
+    std::cerr << "Jackknife c = " << jackknifeC << std::endl;
+    std::cerr << "2012 Manuscript c = " << sumC_ij_my/(numIndividuals*(numIndividuals-1)) << std::endl;
+    
+    // Print results:
+    std::cerr << "notInformative = " << notInformative << std::endl;
+    std::cerr << "Printing the final coancestry matrix to " << outChunksMatrixFileName << std::endl;
+    *outChunksMatrixFile << "#Cfactor " << jackknifeC << std::endl;
+    *outChunksMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outChunksMatrixFile);
+    print_matrix_wNames(outChunksNoMissing, *outChunksMatrixFile,individuals);
+    
     
     // If requested, print the per-chromosome results
     if (opt::bOutputChr) {
