@@ -473,7 +473,7 @@ int paintSqlMain(int argc, char** argv) {
     std::vector<std::vector<double>> p_ij_full;
     std::vector<std::vector<double>> s2_ij;
     std::vector<std::vector<double>> my_empiricalVar;
-    int blockSize = 100;
+    int blockSize = 50;
     int ploidy = 2;
     int notInformative = 0;
     
@@ -726,7 +726,7 @@ int paintSqlMain(int argc, char** argv) {
     
     // Estimate empirical variances by jackknife:
     double sumC_ij = 0; double sumC_ij_my = 0;
-    double sumTV_ij = 0; double sumEVpaper = 0;
+    double sumTV_ij = 0; double sumEVjackknife = 0;
     for (int i = 0; i < numIndividuals; i++) {
         for (int j = 0; j < numIndividuals; j++) {
             if (i != j) {
@@ -740,10 +740,12 @@ int paintSqlMain(int argc, char** argv) {
                 sumC_ij = sumC_ij + c_ij[i][j];
                 sumC_ij_my = sumC_ij_my + empiricalVariancesPaper[i][j]/theoreticalVariancesMatrix[i][j];
                 sumTV_ij = sumTV_ij + theoreticalVariancesMatrix[i][j];
-                sumEVpaper = sumEVpaper + empiricalVariancesPaper[i][j];
+                sumEVjackknife = sumEVjackknife + empiricalVariancesMatrix[i][j];
             }
         }
     }
+    
+    
     // print_vector_stream(bC.matrix[0][1], std::cerr,',');
     // std::cerr << "s2_ij[0][1] = " << s2_ij[0][1] << std::endl;
     // std::cerr << "outChunksMatrix[0][1] = " << outChunksMatrix[0][1] << std::endl;
@@ -761,6 +763,8 @@ int paintSqlMain(int argc, char** argv) {
     // std::cerr << "Mean theoretical T_V per block = " << sumTV_ij/(numIndividuals*(numIndividuals-1)) << std::endl;
     
     double jackknifeC = sumC_ij/(numIndividuals*(numIndividuals-1));
+    double meanEV = sumEVjackknife/(numIndividuals*(numIndividuals-1));
+    std::cerr << "meanEV = " << meanEV << std::endl;
     std::cerr << "Theoretical c = " << ploidy * (1.0/(numIndividuals-1)) << std::endl;
     std::cerr << "Jackknife c = " << jackknifeC << std::endl;
     std::cerr << "2012 Manuscript c = " << sumC_ij_my/(numIndividuals*(numIndividuals-1)) << std::endl;
