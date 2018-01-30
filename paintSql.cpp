@@ -593,7 +593,7 @@ int paintSqlMain(int argc, char** argv) {
                             std::vector<double> thisRecipientSimVector = calculateSimilarityAnyPloidy(fields, recipientHaps[h_i], i, numIndividuals,outChunksMatrix, tagsRead, nRecipientAlleles,nAllelesPerInd);
                             recipientSimVectors.push_back(thisRecipientSimVector);
                         }
-                        for (int j = 0; j < recipientSimVectors[0].size(); j++) {
+                        for (int j = 0; j < numIndividuals; j++) {
                             double sumSimVectorsJ = 0;
                             for (int k = 0; k < nRecipientAlleles; k++) {
                                 sumSimVectorsJ = sumSimVectorsJ + recipientSimVectors[k][j];
