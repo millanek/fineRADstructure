@@ -104,9 +104,9 @@ RADpainter_DEPENDENCIES = $(am__DEPENDENCIES_1)
 RADpainter_LINK = $(CXXLD) $(RADpainter_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_finestructure_OBJECTS = finestructure-safegetline.$(OBJEXT) \
-	finestructure-data.$(OBJEXT) finestructure-pcadata.$(OBJEXT) \
-	finestructure-fsxml.$(OBJEXT) finestructure-state.$(OBJEXT) \
-	finestructure-node.$(OBJEXT) finestructure-inf1.$(OBJEXT) \
+	finestructure-data.$(OBJEXT) finestructure-fsxml.$(OBJEXT) \
+	finestructure-state.$(OBJEXT) finestructure-node.$(OBJEXT) \
+	finestructure-inf1.$(OBJEXT) \
 	finestructure-infadmixture.$(OBJEXT) \
 	finestructure-infextract.$(OBJEXT) \
 	finestructure-infextract2.$(OBJEXT) \
@@ -510,11 +510,11 @@ top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4 -I ./eigen/ 
 
 #OPTIMIZATION = -O1 -g -Wall
-OPTIMIZATION = -O3 -Wall -mfpmath=sse -msse -msse2 -funroll-loops -fomit-frame-pointer -ftree-vectorize -funsafe-math-optimizations -I ./eigen/ -lgsl -lgslcblas
+OPTIMIZATION = -O3 -Wall -mfpmath=sse -msse -msse2 -funroll-loops -fomit-frame-pointer -ftree-vectorize -funsafe-math-optimizations -lgsl -lgslcblas
 finestructure_CXXFLAGS = $(GSL_CFLAGS) $(OPTIMIZATION) -Wall 
 finestructure_LDFLAGS = $(OPTIMIZATION) 
 finestructure_LDADD = $(GSL_LIBS)
-finestructure_SOURCES = safegetline.h data.h pcadata.h fsxml.h state.h node.h inf1.h infadmixture.h infextract.h infextract2.h infextract3.h infextract4.h infextract5.h infmcmc.h fines.h finesfunctions.h rng.h safegetline.cpp data.cpp pcadata.cpp fsxml.cpp state.cpp node.cpp inf1.cpp infadmixture.cpp infextract.cpp infextract2.cpp infextract3.cpp infextract4.cpp infextract5.cpp infmcmc.cpp finesfunctions.cpp fines.cpp rng.cpp
+finestructure_SOURCES = safegetline.h data.h fsxml.h state.h node.h inf1.h infadmixture.h infextract.h infextract2.h infextract3.h infextract4.h infextract5.h infmcmc.h fines.h finesfunctions.h rng.h safegetline.cpp data.cpp fsxml.cpp state.cpp node.cpp inf1.cpp infadmixture.cpp infextract.cpp infextract2.cpp infextract3.cpp infextract4.cpp infextract5.cpp infmcmc.cpp finesfunctions.cpp fines.cpp rng.cpp
 RADpainter_CXXFLAGS = $(GSL_CFLAGS) -std=c++0x
 RADpainter_LDADD = $(GSL_LIBS)
 RADpainter_SOURCES = tagPainter.h paintSql.h utils.h tagPainter.cpp paintSql.cpp utils.cpp 
@@ -631,7 +631,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/finestructure-infextract5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/finestructure-infmcmc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/finestructure-node.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/finestructure-pcadata.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/finestructure-rng.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/finestructure-safegetline.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/finestructure-state.Po@am__quote@
@@ -719,20 +718,6 @@ finestructure-data.obj: data.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='data.cpp' object='finestructure-data.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(finestructure_CXXFLAGS) $(CXXFLAGS) -c -o finestructure-data.obj `if test -f 'data.cpp'; then $(CYGPATH_W) 'data.cpp'; else $(CYGPATH_W) '$(srcdir)/data.cpp'; fi`
-
-finestructure-pcadata.o: pcadata.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(finestructure_CXXFLAGS) $(CXXFLAGS) -MT finestructure-pcadata.o -MD -MP -MF $(DEPDIR)/finestructure-pcadata.Tpo -c -o finestructure-pcadata.o `test -f 'pcadata.cpp' || echo '$(srcdir)/'`pcadata.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/finestructure-pcadata.Tpo $(DEPDIR)/finestructure-pcadata.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='pcadata.cpp' object='finestructure-pcadata.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(finestructure_CXXFLAGS) $(CXXFLAGS) -c -o finestructure-pcadata.o `test -f 'pcadata.cpp' || echo '$(srcdir)/'`pcadata.cpp
-
-finestructure-pcadata.obj: pcadata.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(finestructure_CXXFLAGS) $(CXXFLAGS) -MT finestructure-pcadata.obj -MD -MP -MF $(DEPDIR)/finestructure-pcadata.Tpo -c -o finestructure-pcadata.obj `if test -f 'pcadata.cpp'; then $(CYGPATH_W) 'pcadata.cpp'; else $(CYGPATH_W) '$(srcdir)/pcadata.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/finestructure-pcadata.Tpo $(DEPDIR)/finestructure-pcadata.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='pcadata.cpp' object='finestructure-pcadata.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(finestructure_CXXFLAGS) $(CXXFLAGS) -c -o finestructure-pcadata.obj `if test -f 'pcadata.cpp'; then $(CYGPATH_W) 'pcadata.cpp'; else $(CYGPATH_W) '$(srcdir)/pcadata.cpp'; fi`
 
 finestructure-fsxml.o: fsxml.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(finestructure_CXXFLAGS) $(CXXFLAGS) -MT finestructure-fsxml.o -MD -MP -MF $(DEPDIR)/finestructure-fsxml.Tpo -c -o finestructure-fsxml.o `test -f 'fsxml.cpp' || echo '$(srcdir)/'`fsxml.cpp

@@ -3,7 +3,7 @@
 #include "data.h"
 #include "fines.h"
 #include "fsxml.h"
-#include "pcadata.h"
+//#include "pcadata.h"
 #include "safegetline.h"
 
 #include <vector>
@@ -52,13 +52,13 @@ public:
 // ***** Functions to do with merging and splitting
     void merge(int a,int b);// Merges a and b
     //void split(int a);// Splits a: with random allocation
-    double splitSAMS(int i, int j,bool greedy, State * relstate=NULL,PcaData *pca=NULL);/// performs the SAMS split on the individuals i and j, which must be in the same population
-    double probOfSplitSAMS(int a, int b, State * relstate=NULL,PcaData *pca=NULL);///< Calculates the probability of the named split having been performed by a merge.
+    double splitSAMS(int i, int j,bool greedy, State * relstate=NULL);/// performs the SAMS split on the individuals i and j, which must be in the same population
+    double probOfSplitSAMS(int a, int b, State * relstate=NULL);///< Calculates the probability of the named split having been performed by a merge.
 
-    void splitSAMS(int a, State * relstate,PcaData *pca=NULL);/// splits a population using the SAMS algorithm
+    void splitSAMS(int a, State * relstate);/// splits a population using the SAMS algorithm
     void splitSAMSgreedy(int a,int cmax, State * relstate=NULL);/// splits a population using the SAMS algorithm, accepting only the highest possible split
     int addEmptyPop();///<Adds a new population, updating beta,popX and popsize, returning the index of the population
-    int movePcaAutoInd(int testi,int i, int j,PcaData *pca=NULL);/// Moves ind if it is "close enough" to i or j
+    //int movePcaAutoInd(int testi,int i, int j,PcaData *pca=NULL);/// Moves ind if it is "close enough" to i or j
 //    void movePcaAuto(int opindex,int i, int j,double targd,PcaData *pca);
 //    bool testPcaAuto(int a, int b,int i, int j,double targd,PcaData *pca);
     bool isObtuseAngle(double d1, double d2, double d3);///< For calculating whether a point is "between" two others

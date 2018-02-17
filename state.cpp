@@ -509,7 +509,7 @@ int State::addEmptyPop()
 	return(psize.size()-1);// returns the index of the new pop
 }
 
-double State::probOfSplitSAMS(int i, int j, State * relstate,PcaData *pca)
+double State::probOfSplitSAMS(int i, int j, State * relstate)
 {
 //  verbose=true;
 	bool valid=true;
@@ -582,7 +582,7 @@ double State::probOfSplitSAMS(int i, int j, State * relstate,PcaData *pca)
 	return(-DBL_MAX);
 }
 
-double State::splitSAMS(int i, int j,bool greedy, State * relstate,PcaData *pca)
+double State::splitSAMS(int i, int j,bool greedy, State * relstate)
 {
 
 	if(i==j) {cerr<<"WARNING: Tried to split a single individual!"<<endl;return(0);}
@@ -655,14 +655,14 @@ double State::splitSAMS(int i, int j,bool greedy, State * relstate,PcaData *pca)
 	return(logpofsplit);
 }
 
-void State::splitSAMS(int a, State * relstate,PcaData *pca)
+void State::splitSAMS(int a, State * relstate)
 {
 	vector<int> pop=getIndInPop(a);
 	if(pop.size()==1) {cerr<<"WARNING: splitting population of size 1!"<<endl;return;}
 	int i=RandomInteger(0,pop.size()-1);
 	int j=i;
 	while(j==i) j=RandomInteger(0,pop.size()-1);
-	splitSAMS(pop[i],pop[j],false,relstate,pca);
+	splitSAMS(pop[i],pop[j],false,relstate);
 }
 
 
@@ -1591,16 +1591,16 @@ void State::reorderIndiv(int pop,int from, int to)
     indinp[pop].erase(indinp[pop].begin()+efffrom);
 }
 
-int State::movePcaAutoInd(int testi,int i, int j,PcaData *pca)
+/*int State::movePcaAutoInd(int testi,int i, int j,PcaData *pca)
 {
     if(pca==NULL) return(0);
     double targd=pca->getDist(i,j);
     double di=pca->getDist(testi,i);
     double dj=pca->getDist(testi,j);
-/*    cout<<"d="<<d1<<","<<targd<<","<<d2<<":"<<getCosAngle(d1,targd,d2)<<endl;
+    cout<<"d="<<d1<<","<<targd<<","<<d2<<":"<<getCosAngle(d1,targd,d2)<<endl;
     cout<<"d="<<d2<<","<<targd<<","<<d1<<":"<<getCosAngle(d2,targd,d1)<<endl;
     if(d1>targd && d1<d2) {nc++; moveInd(opop[c1],ind[i]);
-    }else if(d2<targd && d2<d1) {nc++; moveInd(opop[c1],ind[j]);}*/
+    }else if(d2<targd && d2<d1) {nc++; moveInd(opop[c1],ind[j]);}
 //    if(isObtuseAngle(d1,targd,d2)) {nc++; moveInd(opop[c1],ind[i]);
 //    }else if(isObtuseAngle(d2,targd,d1)) {nc++; moveInd(opop[c1],ind[j]);}
     if(isObtuseAngle(di,targd,dj)) { //moveInd(testi,ind[i]);
@@ -1609,7 +1609,7 @@ int State::movePcaAutoInd(int testi,int i, int j,PcaData *pca)
       return(2);
     }
     return(0);
-}
+} */
 
 bool State::isObtuseAngle(double d1, double d2, double d3){
   //return(false);

@@ -60,7 +60,7 @@ protected:
     double P_SAMS,P_MERGESPLIT,P_IND;
     int datainference;
     bool usecounts,uselengths,usesums;
-    PcaData *pca;
+    //PcaData *pca;
     double nullprob;
 };
 
