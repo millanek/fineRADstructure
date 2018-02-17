@@ -529,7 +529,7 @@ S120:
     muprev = 0.0;
     if(mu == muold) goto S130;
     muold = mu;
-    m = max(1L,(long) (mu));
+    m = myMax(1L,(long) (mu));
     l = 0;
     p = exp(-mu);
     q = p0 = p;
@@ -547,7 +547,7 @@ S130:
 */
     if(l == 0) goto S150;
     j = 1;
-    if(u > 0.458) j = min(l,m);
+    if(u > 0.458) j = myMin(l,m);
     for(k=j; k<=l; k++) {
         if(u <= *(pp+k-1)) goto S180;
     }

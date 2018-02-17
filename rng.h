@@ -9,8 +9,8 @@
 #include <vector>
 
 #define ABS(x) ((x) >= 0 ? (x) : -(x))
-#define min(a,b) ((a) <= (b) ? (a) : (b))
-#define max(a,b) ((a) >= (b) ? (a) : (b))
+#define myMin(a,b) ((a) <= (b) ? (a) : (b))
+#define myMax(a,b) ((a) >= (b) ? (a) : (b))
 #define OVERFLO 1e100
 #define UNDERFLO 1e-100
 

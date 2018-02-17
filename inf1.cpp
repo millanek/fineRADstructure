@@ -102,7 +102,7 @@ void Inf1::createSkeletonTree()
 
 void Inf1::statusOut(long c1, long numints)
 {
-	long maxdisp=min(numints,50);
+	long maxdisp=myMin(numints,50);
 	int gap=((numints)/maxdisp);
 	int numhash=1;
 	if ((c1)%gap==0){
