@@ -1,3 +1,5 @@
 Package creation date: Wed May 29 07:31:03 BST 2013
+06/03/2018: v.0.3.1 Better hanling of missing genotypes (Ns) within tags; experimental utility for data conversion from VCF
+15/01/2018: v.0.3 Can now handle arbitrary ploidy
 25/08/2017: v.0.2 The c value for clustering is now inferred directly from the data by block jackknife; also missing data hadling has been improved - should eliminate the previous risk of phantom structure introduced by variation in missingness
 Pre 25/08/2017: There are many versions that all have the same version number (0.1 and below). Please update to the most recent version, as there are undocuemnted issues with older versions.
