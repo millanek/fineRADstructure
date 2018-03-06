@@ -7,6 +7,7 @@
 //
 
 #include "paintSql.h"
+#include "hapsFromVCF.h"
 #include "utils.h"
 
  
@@ -23,7 +24,9 @@ static const char *USAGE_MESSAGE =
 "Contact: " THIS_AUTHOR " [" BUGREPORT "]\n"
 "Usage: " BIN " <command> [options]\n\n"
 "Commands:\n"
-"           paint       Get co-ancestry matrix for fineStructure\n"
+"           paint           Get co-ancestry matrix for fineStructure\n"
+"           hapsFromVCF     (experimental) Get the haplotype format input from a VCF file\n"
+"                           !NOTE! for now this only works for some VCF formats\n"
 "\nReport bugs to " BUGREPORT "\n\n";
 
 
@@ -50,6 +53,8 @@ int main(int argc, char * argv[]) {
         
         if(command == "paint")
             paintSqlMain(argc - 1, argv + 1);
+        else if(command == "hapsFromVCF")
+            VCFhapsMain(argc - 1, argv + 1);
         else
         {
             std::cerr << "Unrecognized command: " << command << "\n";

@@ -25,6 +25,7 @@
 #include <numeric>
 #include <ctime>
 #include <regex>
+#include "gzstream.h"
 
 using std::string;
 
@@ -32,13 +33,18 @@ using std::string;
 #define BUGREPORT "milan.malinsky@unibas.ch"
 #define GZIP_EXT ".gz"
 #define THIS_AUTHOR "Milan Malinsky"
-#define V "0.3 r103"
+#define V "0.3.1 r104"
+#define GZIP_EXT ".gz"
 
+// VCF format constant
+static const int NUM_NON_GENOTYPE_COLUMNS=9;  // 8 mendatory columns + 1 column with definition of the genotype columns
 
+double stringToDouble(std::string s);
+std::istream* createReader(const std::string& filename, std::ios_base::openmode mode = std::ios_base::in);
 std::vector<std::string> split(const std::string &s, char delim);
 std::string stripExtension(const std::string& filename);
 void initialize_matrix_double(std::vector<std::vector<double> >& m, int m_size);
-
+double calculateInbreedingCoefficient(std::vector<int>& numericGenotypes);
 
 class BlockCoancestries
 {
@@ -178,6 +184,42 @@ template <class T> double jackknive_std_err_sum(T& vector) {
     double var = ((double)(jackkniveSums.size()-1)/(double)jackkniveSums.size()) * sum;
     double Dstd_err = sqrt(var);
     return Dstd_err;
+}
+
+inline std::vector<std::string> returnGenotypeBasesAndZeroOneTwo(const std::string& ref, const std::string& alt, const std::vector<char>& genotype, char hetTreatment) {
+    std::vector<std::string> baseZeroOne;
+    if (genotype[0] == '0' && genotype[1] == '0') {
+        baseZeroOne.push_back(ref); baseZeroOne.push_back(ref); baseZeroOne.push_back("0");
+        return baseZeroOne;
+    } else if (genotype[0] == '1' && genotype[1] == '1') {
+        baseZeroOne.push_back(alt); baseZeroOne.push_back(alt); baseZeroOne.push_back("2");
+        return baseZeroOne;
+    } else if (genotype[0] == '.') { // Missing data
+        baseZeroOne.push_back("N"); baseZeroOne.push_back("N"); baseZeroOne.push_back("0");
+        return baseZeroOne;
+    } else {
+        if (hetTreatment == 'r') {
+            double rn = ((double) rand() / RAND_MAX);
+            if (rn <= 0.5) {
+                baseZeroOne.push_back(ref); baseZeroOne.push_back(alt); baseZeroOne.push_back("1");
+                return baseZeroOne;
+            } else {
+                baseZeroOne.push_back(alt); baseZeroOne.push_back(ref); baseZeroOne.push_back("1");
+                return baseZeroOne;
+            }
+        } else if(hetTreatment == 'p') {
+            if (genotype[0] == '0') {
+                baseZeroOne.push_back(ref); baseZeroOne.push_back(alt); baseZeroOne.push_back("1");
+                return baseZeroOne;
+            } else if (genotype[0] == '1') {
+                baseZeroOne.push_back(alt); baseZeroOne.push_back(ref); baseZeroOne.push_back("1");
+                return baseZeroOne;
+            }
+        } else {
+            exit(1);
+        }
+    }
+    exit(1);
 }
 
 #endif /* defined(__RADTAGpainter__utils__) */

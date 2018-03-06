@@ -97,7 +97,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_RADpainter_OBJECTS = RADpainter-tagPainter.$(OBJEXT) \
-	RADpainter-paintSql.$(OBJEXT) RADpainter-utils.$(OBJEXT)
+	RADpainter-paintSql.$(OBJEXT) RADpainter-utils.$(OBJEXT) \
+	RADpainter-hapsFromVCF.$(OBJEXT) RADpainter-gzstream.$(OBJEXT)
 RADpainter_OBJECTS = $(am_RADpainter_OBJECTS)
 am__DEPENDENCIES_1 =
 RADpainter_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -507,7 +508,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-ACLOCAL_AMFLAGS = -I m4 -I ./eigen/ 
+ACLOCAL_AMFLAGS = -I m4
+AM_LDFLAGS = -lz
 
 #OPTIMIZATION = -O1 -g -Wall
 OPTIMIZATION = -O3 -Wall -mfpmath=sse -msse -msse2 -funroll-loops -fomit-frame-pointer -ftree-vectorize -funsafe-math-optimizations -lgsl -lgslcblas
@@ -517,7 +519,7 @@ finestructure_LDADD = $(GSL_LIBS)
 finestructure_SOURCES = safegetline.h data.h fsxml.h state.h node.h inf1.h infadmixture.h infextract.h infextract2.h infextract3.h infextract4.h infextract5.h infmcmc.h fines.h finesfunctions.h rng.h safegetline.cpp data.cpp fsxml.cpp state.cpp node.cpp inf1.cpp infadmixture.cpp infextract.cpp infextract2.cpp infextract3.cpp infextract4.cpp infextract5.cpp infmcmc.cpp finesfunctions.cpp fines.cpp rng.cpp
 RADpainter_CXXFLAGS = $(GSL_CFLAGS) -std=c++0x
 RADpainter_LDADD = $(GSL_LIBS)
-RADpainter_SOURCES = tagPainter.h paintSql.h utils.h tagPainter.cpp paintSql.cpp utils.cpp 
+RADpainter_SOURCES = tagPainter.h paintSql.h utils.h tagPainter.cpp paintSql.cpp utils.cpp hapsFromVCF.h hapsFromVCF.cpp gzstream.h gzstream.cpp
 check_SCRIPTS = profilerun.sh
 TESTS = $(check_SCRIPTS)
 all: all-am
@@ -615,6 +617,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RADpainter-gzstream.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RADpainter-hapsFromVCF.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RADpainter-paintSql.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RADpainter-tagPainter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RADpainter-utils.Po@am__quote@
@@ -690,6 +694,34 @@ RADpainter-utils.obj: utils.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='utils.cpp' object='RADpainter-utils.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -c -o RADpainter-utils.obj `if test -f 'utils.cpp'; then $(CYGPATH_W) 'utils.cpp'; else $(CYGPATH_W) '$(srcdir)/utils.cpp'; fi`
+
+RADpainter-hapsFromVCF.o: hapsFromVCF.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -MT RADpainter-hapsFromVCF.o -MD -MP -MF $(DEPDIR)/RADpainter-hapsFromVCF.Tpo -c -o RADpainter-hapsFromVCF.o `test -f 'hapsFromVCF.cpp' || echo '$(srcdir)/'`hapsFromVCF.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/RADpainter-hapsFromVCF.Tpo $(DEPDIR)/RADpainter-hapsFromVCF.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='hapsFromVCF.cpp' object='RADpainter-hapsFromVCF.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -c -o RADpainter-hapsFromVCF.o `test -f 'hapsFromVCF.cpp' || echo '$(srcdir)/'`hapsFromVCF.cpp
+
+RADpainter-hapsFromVCF.obj: hapsFromVCF.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -MT RADpainter-hapsFromVCF.obj -MD -MP -MF $(DEPDIR)/RADpainter-hapsFromVCF.Tpo -c -o RADpainter-hapsFromVCF.obj `if test -f 'hapsFromVCF.cpp'; then $(CYGPATH_W) 'hapsFromVCF.cpp'; else $(CYGPATH_W) '$(srcdir)/hapsFromVCF.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/RADpainter-hapsFromVCF.Tpo $(DEPDIR)/RADpainter-hapsFromVCF.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='hapsFromVCF.cpp' object='RADpainter-hapsFromVCF.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -c -o RADpainter-hapsFromVCF.obj `if test -f 'hapsFromVCF.cpp'; then $(CYGPATH_W) 'hapsFromVCF.cpp'; else $(CYGPATH_W) '$(srcdir)/hapsFromVCF.cpp'; fi`
+
+RADpainter-gzstream.o: gzstream.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -MT RADpainter-gzstream.o -MD -MP -MF $(DEPDIR)/RADpainter-gzstream.Tpo -c -o RADpainter-gzstream.o `test -f 'gzstream.cpp' || echo '$(srcdir)/'`gzstream.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/RADpainter-gzstream.Tpo $(DEPDIR)/RADpainter-gzstream.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='gzstream.cpp' object='RADpainter-gzstream.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -c -o RADpainter-gzstream.o `test -f 'gzstream.cpp' || echo '$(srcdir)/'`gzstream.cpp
+
+RADpainter-gzstream.obj: gzstream.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -MT RADpainter-gzstream.obj -MD -MP -MF $(DEPDIR)/RADpainter-gzstream.Tpo -c -o RADpainter-gzstream.obj `if test -f 'gzstream.cpp'; then $(CYGPATH_W) 'gzstream.cpp'; else $(CYGPATH_W) '$(srcdir)/gzstream.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/RADpainter-gzstream.Tpo $(DEPDIR)/RADpainter-gzstream.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='gzstream.cpp' object='RADpainter-gzstream.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(RADpainter_CXXFLAGS) $(CXXFLAGS) -c -o RADpainter-gzstream.obj `if test -f 'gzstream.cpp'; then $(CYGPATH_W) 'gzstream.cpp'; else $(CYGPATH_W) '$(srcdir)/gzstream.cpp'; fi`
 
 finestructure-safegetline.o: safegetline.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(finestructure_CXXFLAGS) $(CXXFLAGS) -MT finestructure-safegetline.o -MD -MP -MF $(DEPDIR)/finestructure-safegetline.Tpo -c -o finestructure-safegetline.o `test -f 'safegetline.cpp' || echo '$(srcdir)/'`safegetline.cpp

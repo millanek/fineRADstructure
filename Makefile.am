@@ -1,4 +1,5 @@
-ACLOCAL_AMFLAGS = -I m4 -I ./eigen/ 
+ACLOCAL_AMFLAGS = -I m4
+AM_LDFLAGS = -lz
 
 bin_PROGRAMS = finestructure RADpainter
 
@@ -11,7 +12,7 @@ finestructure_SOURCES = safegetline.h data.h fsxml.h state.h node.h inf1.h infad
 
 RADpainter_CXXFLAGS = $(GSL_CFLAGS) -std=c++0x
 RADpainter_LDADD = $(GSL_LIBS)
-RADpainter_SOURCES = tagPainter.h paintSql.h utils.h tagPainter.cpp paintSql.cpp utils.cpp 
+RADpainter_SOURCES = tagPainter.h paintSql.h utils.h tagPainter.cpp paintSql.cpp utils.cpp hapsFromVCF.h hapsFromVCF.cpp gzstream.h gzstream.cpp
 
 check_SCRIPTS = profilerun.sh
 TESTS = $(check_SCRIPTS)

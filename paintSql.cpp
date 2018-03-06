@@ -110,6 +110,62 @@ double compareSeqs(const std::string& seq1, const std::string& seq2) {
     return diffR;
 }
 
+
+// get the proportion of difference between the recipient and the donor
+// Assumes that it has been checked that the donor and the recipient have some overlap in DNA bases (A,C,G,T)
+// when you ignore Ns [i.e. the function checkOverlap() would return true]
+double compareSeqsRecipientDonor(const std::string& recipient, const std::string& donor) {
+    if ((recipient.length() != donor.length())) {
+        std::cerr << "recipient: " << recipient << "!" << recipient.length() << std::endl;
+        std::cerr << "donor: " << donor << "!" << donor.length()<< std::endl;
+    }
+    assert(recipient.length() == donor.length());
+    int l = (int)recipient.length();
+    int DNArecipientBp = 0; int DNAoverlap = 0; int numDiff = 0;
+    for (int i = 0; i < l; i++) {
+        if (recipient[i] != 'N') {
+            DNArecipientBp++;
+            if (donor[i] != 'N') {
+                DNAoverlap++;
+                if (recipient[i] != donor[i]) {
+                    numDiff++;
+                }
+            }
+        }
+    }
+    double diffInOverlap = (double)numDiff/DNAoverlap; // Diff from observed overlap
+    double missingRandomDiff = 1-pow(0.25,DNArecipientBp-DNAoverlap); // Assumed diff from missing bases
+    
+    // Now get a weighted average of the two:
+    double ovlpProportion = (double)DNAoverlap/DNArecipientBp;
+    
+    double diffR = diffInOverlap*ovlpProportion + missingRandomDiff*(1-ovlpProportion);
+    return diffR;
+}
+
+
+
+// find if there is any overlap between two sequences when you ignore Ns
+bool checkOverlap(const std::string& seq1, const std::string& seq2) {
+    if ((seq1.length() != seq2.length())) {
+        std::cerr << "seq1: " << seq1 << "!" << seq1.length() << std::endl;
+        std::cerr << "seq2: " << seq2 << "!" << seq2.length()<< std::endl;
+    }
+    assert(seq1.length() == seq2.length());
+    int numNs = 0;
+    for (int i = 0; i < seq1.length(); i++) {
+        if (seq1[i] == 'N' || seq2[i] == 'N') {
+            numNs++;
+        }
+    }
+    if (seq1.length() - numNs == 0)
+        return false;
+    else
+        return true;
+}
+
+
+
 std::vector<int> findMinDiffIndices(std::vector<double>& diffs, double minDiff) {
     std::vector<int> indices;
     std::vector<double>::iterator iter = diffs.begin();
@@ -228,7 +284,8 @@ std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::string>&
         if (i != thisIndI) {
             //assert(donorHaps.size() < 3);
             if (nAllelesPerInd[i] == 1) {
-                if (allHaps[i] == "" || allHaps[i] == " " || std::regex_match(allHaps[i], std::regex("N+"))) {
+                if (allHaps[i] == "" || allHaps[i] == " " || std::regex_match(allHaps[i], std::regex("N+")) ||
+                    !checkOverlap(recipientHap, allHaps[i])) {
                     numMissing = numMissing + 1; thisMissing[i] += (1.0/numRecipientHaps);
                     diffVector[diffVectorPos] = missingRandomDiff;
                     thisMissingBasic = thisMissingBasic + (1/(double)(nSamples-1));
@@ -240,14 +297,15 @@ std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::string>&
                         totalToMissing += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar);
                     }
                 } else {
-                    diffVector[diffVectorPos] = compareSeqs(recipientHap, allHaps[i]);
+                    diffVector[diffVectorPos] = compareSeqsRecipientDonor(recipientHap, allHaps[i]);
                 }
             } else {
                 std::vector<std::string> donorHaps = split(allHaps[i], '/');
                 assert(nAllelesPerInd[i] == (int)donorHaps.size());
                 //std::cerr << "nAllelesPerInd[i]: " << nAllelesPerInd[i] << " i: " << i << std::endl;
                 for (int j = 0; j < nAllelesPerInd[i]; j++) {
-                    if (std::regex_match(donorHaps[j], std::regex("N+"))) {
+                    if (std::regex_match(donorHaps[j], std::regex("N+")) ||
+                        !checkOverlap(recipientHap, donorHaps[j])) {
                         numMissing = numMissing + (1.0/donorHaps.size());
                         thisMissing[i] += (1.0/numRecipientHaps)/nAllelesPerInd[i];
                         diffVector[diffVectorPos+j] = missingRandomDiff;
@@ -261,7 +319,7 @@ std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::string>&
                         }
                     } else {
                         //std::cerr << "donorHaps[j]: " << donorHaps[j] << " i: " << i << std::endl;
-                        diffVector[diffVectorPos+j] = compareSeqs(recipientHap, donorHaps[j]);
+                        diffVector[diffVectorPos+j] = compareSeqsRecipientDonor(recipientHap, donorHaps[j]);
                         // outChunksNoMissing[thisIndI]
                     }
                 }
@@ -763,11 +821,11 @@ int paintSqlMain(int argc, char** argv) {
     // std::cerr << "Mean theoretical T_V per block = " << sumTV_ij/(numIndividuals*(numIndividuals-1)) << std::endl;
     
     double jackknifeC = sumC_ij/(numIndividuals*(numIndividuals-1));
-    double meanEV = sumEVjackknife/(numIndividuals*(numIndividuals-1));
-    std::cerr << "meanEV = " << meanEV << std::endl;
+    //double meanEV = sumEVjackknife/(numIndividuals*(numIndividuals-1));
+    //std::cerr << "meanEV = " << meanEV << std::endl;
     std::cerr << "Theoretical c = " << opt::ploidy * (1.0/(numIndividuals-1)) << std::endl;
     std::cerr << "Jackknife c = " << jackknifeC << std::endl;
-    std::cerr << "2012 Manuscript c = " << sumC_ij_my/(numIndividuals*(numIndividuals-1)) << std::endl;
+    //std::cerr << "2012 Manuscript c = " << sumC_ij_my/(numIndividuals*(numIndividuals-1)) << std::endl;
     
     // Print results:
     std::cerr << "notInformative = " << notInformative << std::endl;
