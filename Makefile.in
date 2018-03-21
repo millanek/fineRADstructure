@@ -14,6 +14,9 @@
 
 @SET_MAKE@
 
+#ACLOCAL_AMFLAGS = -I m4
+#AM_LDFLAGS = -lz
+
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -508,7 +511,6 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-ACLOCAL_AMFLAGS = -I m4
 
 #OPTIMIZATION = -O1 -g -Wall
 OPTIMIZATION = -O3 -Wall -mfpmath=sse -msse -msse2 -funroll-loops -fomit-frame-pointer -ftree-vectorize -funsafe-math-optimizations -lgsl -lgslcblas
