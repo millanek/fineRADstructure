@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-AM_LDFLAGS = -lz
+#AM_LDFLAGS = -lz
 
 bin_PROGRAMS = finestructure RADpainter
 
