@@ -28,7 +28,7 @@ static const char *PAINTSQL_USAGE_MESSAGE =
 
 
 // Options
-static const char* shortopts = "hn:mtc";
+static const char* shortopts = "hn:mcp:";
 static const struct option longopts[] = {
     { "run-name",   required_argument, NULL, 'n' },
     { "chr",   no_argument, NULL, 'c' },
