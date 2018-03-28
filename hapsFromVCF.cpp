@@ -11,6 +11,8 @@
 
 #define SUBPROGRAM "hapsFromVCF"
 
+static int maxLocusGapBp = 1000;
+
 static const char *HAPS_USAGE_MESSAGE =
 "Usage: " BIN " " SUBPROGRAM " [OPTIONS] INPUT.vcf\n"
 "Generate a co-ancestry matrix from RAD data\n"
@@ -37,6 +39,51 @@ namespace opt
     static bool bOutputChr = false;
 }
 
+class VCFprocessCounts {
+public:
+    VCFprocessCounts(size_t ns) : numLoci(0), missingDueToUnphasedHets(0), missingLociNum(0),
+                                processedVariantCounter(0), usedVariantCounter(0) {
+        numSamples = ns;
+        hetCounters.resize(numSamples);
+    };
+    
+    int numLoci; int missingDueToUnphasedHets; int missingLociNum;
+    unsigned int processedVariantCounter; unsigned int usedVariantCounter;
+    size_t numSamples;
+    std::vector<int> hetCounters;
+};
+
+class Alleles {
+public:
+    Alleles(size_t numSamples) {
+        H1.resize(numSamples); H2.resize(numSamples);
+    };
+    
+    std::vector<string> H1; std::vector<string> H2;
+};
+
+
+
+void printAllelesIfNotMissing(Alleles* alleles, VCFprocessCounts* counts, std::regex NsHet) {
+    int numAlleles = (int)alleles->H1.size(); std::vector<string> allelesH1H2;
+    for (std::vector<string>::size_type i = 0; i != numAlleles; i++) {
+        if (alleles->H1[i] != "") {
+            allelesH1H2.push_back(alleles->H1[i] + "/" + alleles->H2[i]);
+        } else {
+            allelesH1H2.push_back("");
+        }
+        if (std::regex_match(allelesH1H2[i], NsHet)) {
+            allelesH1H2[i] = ""; counts->missingLociNum++;
+        }
+        if(counts->hetCounters[i] > 1 && opt::hetTreatment == 'r') {
+            allelesH1H2[i] = ""; counts->missingDueToUnphasedHets++;
+        }
+    }
+    print_vector_stream(allelesH1H2,std::cout);
+    counts->numLoci = counts->numLoci + (int)counts->numSamples;
+}
+
+
 int VCFhapsMain(int argc, char** argv) {
     string line;
     parseVCFoptions(argc, argv);
@@ -48,68 +95,52 @@ int VCFhapsMain(int argc, char** argv) {
     std::istream* vcfFile = createReader(opt::VCFfileName.c_str());
     
     string currentScaffoldNum = "";
-    size_t numSamples;
+    int currentCoord = 0;
     std::vector<string> sampleNames;
-    std::vector<string> scaffoldStrings; std::vector<string> scaffoldStringsH2;
-    unsigned int processedVariantCounter = 0; unsigned int usedVariantCounter = 0;
-    std::vector<int> hetCounters; bool skipRestDueToUnphasedHets = false;
-    int numLoci = 0;
-    int missingLociNum = 0; int missingDueToUnphasedHets = 0;
+    Alleles* alleles = nullptr; VCFprocessCounts* counts = nullptr;
     std::regex NsHet("N+/N+");
     while (getline(*vcfFile, line)) {
         if (line[0] == '#' && line[1] == '#')
             continue;
         else if (line[0] == '#' && line[1] == 'C') {
             std::vector<std::string> fields = split(line, '\t');
-            numSamples = fields.size()-NUM_NON_GENOTYPE_COLUMNS;
-            std::cerr << "numSamples: " << numSamples << std::endl;
+            size_t ns = fields.size()-NUM_NON_GENOTYPE_COLUMNS; std::cerr << "numSamples: " << ns << std::endl;
+            
+            alleles = new Alleles(ns); counts = new VCFprocessCounts(ns);
             // Initialize vectors
-            scaffoldStrings.resize(numSamples); scaffoldStringsH2.resize(numSamples); hetCounters.resize(numSamples);
-            for (std::vector<string>::size_type i = 0; i != scaffoldStrings.size(); i++) {
-                scaffoldStrings[i] = ""; scaffoldStringsH2[i] = ""; hetCounters[i] = 0;
+            for (std::vector<string>::size_type i = 0; i != counts->numSamples; i++) {
+                alleles->H1[i] = ""; alleles->H2[i] = ""; counts->hetCounters[i] = 0;
             }
-            // Open get sample names
+            // Get sample names
             for (std::vector<std::string>::size_type i = NUM_NON_GENOTYPE_COLUMNS; i != fields.size(); i++) {
                 sampleNames.push_back(fields[i]);
             }
             print_vector_stream(sampleNames, std::cout);
         } else {
-            processedVariantCounter++;
+            counts->processedVariantCounter++;
             std::vector<std::string> fields = split(line, '\t');
             std::vector<std::string> info = split(fields[7], ';');
-            if (fields[0] != currentScaffoldNum) {
+            if (fields[0] != currentScaffoldNum || atoi(fields[1].c_str()) - maxLocusGapBp > currentCoord) {
                 if (currentScaffoldNum != "") {
                    // std::cerr << currentScaffoldNum << " processed. Total variants: " << processedVariantCounter << std::endl;
-                    for (std::vector<string>::size_type i = 0; i != scaffoldStrings.size(); i++) {
-                        if (scaffoldStrings[i] != "") {
-                            scaffoldStrings[i] = scaffoldStrings[i] + "/" + scaffoldStringsH2[i];
-                        }
-                        if (std::regex_match(scaffoldStrings[i], NsHet)) {
-                            scaffoldStrings[i] = ""; missingLociNum++;
-                        }
-                        if(hetCounters[i] > 1 && opt::hetTreatment == 'r') {
-                            scaffoldStrings[i] = ""; missingDueToUnphasedHets++;
-                        }
-                    }
-                    print_vector_stream(scaffoldStrings,std::cout); numLoci = numLoci + (int)numSamples;
-                    for (std::vector<string>::size_type i = 0; i != scaffoldStrings.size(); i++) {
-                        scaffoldStrings[i] = ""; scaffoldStringsH2[i] = ""; hetCounters[i] = 0;
+                    printAllelesIfNotMissing(alleles,counts,NsHet);
+                    for (std::vector<string>::size_type i = 0; i != counts->numSamples; i++) {
+                        alleles->H1[i] = ""; alleles->H2[i] = ""; counts->hetCounters[i] = 0;
                     }
                 }
                 // get to the next "chromosome"
-                processedVariantCounter = 1; usedVariantCounter = 0;
-                currentScaffoldNum = fields[0];
-                skipRestDueToUnphasedHets = false;
+                counts->processedVariantCounter = 1; counts->usedVariantCounter = 0;
+                currentScaffoldNum = fields[0]; currentCoord = atoi(fields[1].c_str());
             }
-            if (info[0] != "INDEL") {
+            if (info[0] != "INDEL" && fields[3] != "-" && fields[4] != "-") {
                 //int lengthToAppend = (atoi(fields[1].c_str()) - 1) - (int)inStrPos;
                 // make sure the length is non-negative (can happen
                 // if two consecutive variants have the same coordinate)
                 // for now we just ignore the additional variant
                // if (lengthToAppend >= 0) {
-                std::vector<int> appendVectorInt(numSamples,0);
-                std::vector<std::string> appendVector(numSamples,"0");
-                std::vector<std::string> appendVectorH2(numSamples,"0");
+                std::vector<int> appendVectorInt(counts->numSamples,0);
+                std::vector<std::string> appendVector(counts->numSamples,"0");
+                std::vector<std::string> appendVectorH2(counts->numSamples,"0");
                 for (std::vector<std::string>::size_type i = NUM_NON_GENOTYPE_COLUMNS; i != fields.size(); i++) {
                     //std::cerr << "Going through genotypes1:" << i << std::endl;
                     //std::cerr << scaffoldStrings.size() << " " << inStrPos << " " << fields[1] << " " << currentScaffoldReference.size() << std::endl;
@@ -130,51 +161,50 @@ int VCFhapsMain(int argc, char** argv) {
                         std::cerr << "Strongly negative inbreeding coefficient; Variant: " << fields[0] << "\t" << fields[1] << "\tF = " << F << std::endl;
                     } else {
                         if (opt::hetTreatment == 'r') {
-                            for (std::vector<std::string>::size_type i = 0; i != numSamples; i++) {
+                            for (std::vector<std::string>::size_type i = 0; i != counts->numSamples; i++) {
                                 if (appendVectorInt[i] == 1) {
-                                    hetCounters[i]++;
+                                    counts->hetCounters[i]++;
                                 }
-                                if (hetCounters[i] > 1 && appendVectorInt[i] == 1) {
+                                if (counts->hetCounters[i] > 1 && appendVectorInt[i] == 1) {
                                     //std::cerr << "More than one unphased het in variant: " << fields[0] << "\t" << fields[1] << "\tindividual = " << sampleNames[i] << std::endl;
                                     //std::cerr << "hetCounters[i]: " << hetCounters[i] << "\tusedVariantCounter " << usedVariantCounter << std::endl;
                                     appendVector[i] = "N";
                                     appendVectorH2[i] = "N";
-                                    //skipRestDueToUnphasedHets = true;
                                 }
                             }
                         }
 
-                        for (std::vector<std::string>::size_type i = 0; i != numSamples; i++) {
-                            scaffoldStrings[i].append(appendVector[i]); scaffoldStringsH2[i].append(appendVectorH2[i]);
+                        for (std::vector<std::string>::size_type i = 0; i != counts->numSamples; i++) {
+                            alleles->H1[i].append(appendVector[i]); alleles->H2[i].append(appendVectorH2[i]);
                         }
-                        usedVariantCounter++;
+                        counts->usedVariantCounter++;
+                        currentCoord = atoi(fields[1].c_str());
                     }
                 }
                // }
                 
                 // Double check that all looks OK
-                if((int)scaffoldStrings[0].length() != usedVariantCounter) {
-                    std::cerr << "usedVariantCounter: " << usedVariantCounter << std::endl;
-                    std::cerr << "scaffoldStrings[0].length(): " << scaffoldStrings[0].length() << std::endl;
-                    std::cerr << "scaffoldStrings[1].length(): " << scaffoldStrings[1].length() << std::endl;
+                if((int)alleles->H1[0].length() != counts->usedVariantCounter) {
+                    std::cerr << "usedVariantCounter: " << counts->usedVariantCounter << std::endl;
+                    std::cerr << "scaffoldStrings[0].length(): " << alleles->H1[0].length() << std::endl;
+                    std::cerr << "scaffoldStrings[1].length(): " << alleles->H1[1].length() << std::endl;
                     std::cerr << fields[3] << " " << fields[4] << std::endl;
-                    std::cerr << "scaffoldStrings[0]: " << scaffoldStrings[0] << std::endl;
-                    std::cerr << "scaffoldStrings[1]: " << scaffoldStrings[1] << std::endl;
+                    std::cerr << "scaffoldStrings[0]: " << alleles->H1[0] << std::endl;
+                    std::cerr << "scaffoldStrings[1]: " << alleles->H1[1] << std::endl;
                 }
-                assert((int)scaffoldStrings[0].length() == usedVariantCounter);
+                assert((int)alleles->H1[0].length() == counts->usedVariantCounter);
                 
             }
         }
     }
     // Also the final chr
   //  std::cerr << currentScaffoldNum << " processed. Total variants: " << processedVariantCounter << std::endl;
-    for (std::vector<string>::size_type i = 0; i != scaffoldStrings.size(); i++) {
-        scaffoldStrings[i] = scaffoldStrings[i] + "/" + scaffoldStringsH2[i];
-    }
-    print_vector_stream(scaffoldStrings,std::cout); numLoci = numLoci + (int)numSamples;
-    std::cerr << "Missing loci total: " << missingLociNum+missingDueToUnphasedHets << "; " << (double)(missingLociNum+missingDueToUnphasedHets)/numLoci << "% of total loci"<< std::endl;
-    std::cerr << "Due to missing genotypes: " << missingLociNum << "; " << (double)missingLociNum/(missingLociNum+missingDueToUnphasedHets) << "% of missing" << std::endl;
-    std::cerr << "Due to multiple unphased hets: " << missingDueToUnphasedHets << "; " << (double)missingDueToUnphasedHets/(missingLociNum+missingDueToUnphasedHets) << "% of missing" << std::endl;
+    printAllelesIfNotMissing(alleles,counts,NsHet);
+    
+    int missingTotal = counts->missingLociNum + counts->missingDueToUnphasedHets;
+    std::cerr << "Missing alleles total: " << missingTotal << "; " << (double)missingTotal/counts->numLoci << "% of total alleles"<< std::endl;
+    std::cerr << "Due to missing genotypes: " << counts->missingLociNum << "; " << (double)counts->missingLociNum/missingTotal << "% of missing" << std::endl;
+    std::cerr << "Due to multiple unphased hets: " << counts->missingDueToUnphasedHets << "; " << (double)counts->missingDueToUnphasedHets/missingTotal << "% of missing" << std::endl;
     std::cerr << "DONE!" << std::endl;
     return 0;
 }
