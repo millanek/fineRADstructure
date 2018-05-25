@@ -66,20 +66,25 @@ public:
 
 void printAllelesIfNotMissing(Alleles* alleles, VCFprocessCounts* counts, std::regex NsHet) {
     int numAlleles = (int)alleles->H1.size(); std::vector<string> allelesH1H2;
+    int numMissingAlleles = 0;
     for (std::vector<string>::size_type i = 0; i != numAlleles; i++) {
         if (alleles->H1[i] != "") {
             allelesH1H2.push_back(alleles->H1[i] + "/" + alleles->H2[i]);
+            if (std::regex_match(allelesH1H2[i], NsHet)) {
+                allelesH1H2[i] = ""; counts->missingLociNum++;
+                numMissingAlleles++;
+            } else if(counts->hetCounters[i] > 1 && opt::hetTreatment == 'r') {
+                allelesH1H2[i] = ""; counts->missingDueToUnphasedHets++;
+                numMissingAlleles++;
+            }
         } else {
             allelesH1H2.push_back("");
-        }
-        if (std::regex_match(allelesH1H2[i], NsHet)) {
-            allelesH1H2[i] = ""; counts->missingLociNum++;
-        }
-        if(counts->hetCounters[i] > 1 && opt::hetTreatment == 'r') {
-            allelesH1H2[i] = ""; counts->missingDueToUnphasedHets++;
+            numMissingAlleles++;
         }
     }
-    print_vector_stream(allelesH1H2,std::cout);
+    if (numAlleles > numMissingAlleles) {
+        print_vector_stream(allelesH1H2,std::cout);
+    }
     counts->numLoci = counts->numLoci + (int)counts->numSamples;
 }
 
