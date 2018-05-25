@@ -132,7 +132,9 @@ int VCFhapsMain(int argc, char** argv) {
                 counts->processedVariantCounter = 1; counts->usedVariantCounter = 0;
                 currentScaffoldNum = fields[0]; currentCoord = atoi(fields[1].c_str());
             }
-            if (info[0] != "INDEL" && fields[3] != "-" && fields[4] != "-") {
+            
+            if (info[0] != "INDEL" && fields[3].length() == 1 && fields[4].length() == 1
+                && isDNAonly(fields[3][0]) && isDNAonly(fields[4][0])) {
                 //int lengthToAppend = (atoi(fields[1].c_str()) - 1) - (int)inStrPos;
                 // make sure the length is non-negative (can happen
                 // if two consecutive variants have the same coordinate)

@@ -14,4 +14,18 @@
 int VCFhapsMain(int argc, char** argv);
 void parseVCFoptions(int argc, char** argv);
 
+inline bool isDNAonly(char base) {
+    bool DNAonly;
+    switch (base)
+    {
+        case 'A': DNAonly = true; break;
+        case 'C': DNAonly = true; break;
+        case 'G': DNAonly = true; break;
+        case 'T': DNAonly = true; break;
+        default: DNAonly = false;
+    }
+    return DNAonly;
+}
+
+
 #endif /* hapsFromVCF_h */
