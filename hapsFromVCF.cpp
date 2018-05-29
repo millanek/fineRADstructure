@@ -19,12 +19,13 @@ static const char *HAPS_USAGE_MESSAGE =
 "\n"
 "       -h, --help                              display this help and exit\n"
 "       -H,   --het-treatment <r|p>             r: assign het bases randomly (default); p: use the phase information in the VCF\n"
+"       -F MIN_F                                minimum acceptable inbreeding coefficient (default: F >= -0.3)\n"
 "\n\n"
 "\nReport bugs to " BUGREPORT "\n\n";
 
 
 // Options
-static const char* shortopts = "hn:H:";
+static const char* shortopts = "hn:H:F:";
 static const struct option longopts[] = {
     { "run-name",   required_argument, NULL, 'n' },
     { "het-treatment",   required_argument, NULL, 'H' },
@@ -37,6 +38,7 @@ namespace opt
     static string VCFfileName = "";
     static char hetTreatment = 'r';
     static bool bOutputChr = false;
+    static double minF = -0.3;
 }
 
 class VCFprocessCounts {
@@ -164,7 +166,7 @@ int VCFhapsMain(int argc, char** argv) {
                 
                 if(vector_sum(appendVectorInt) > 0) {
                     double F = calculateInbreedingCoefficient(appendVectorInt);
-                    if (F < -0.3) {
+                    if (F < opt::minF) {
                         std::cerr << "Strongly negative inbreeding coefficient; Variant: " << fields[0] << "\t" << fields[1] << "\tF = " << F << std::endl;
                     } else {
                         if (opt::hetTreatment == 'r') {
@@ -226,6 +228,7 @@ void parseVCFoptions(int argc, char** argv) {
         {
             case 'n': arg >> opt::runName; break;
             case '?': die = true; break;
+            case 'F': arg >> opt::minF; break;
             case 'h': std::cout << HAPS_USAGE_MESSAGE;
                 exit(EXIT_SUCCESS);
         }
