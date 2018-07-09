@@ -250,10 +250,10 @@ void simVectorChecks(const std::vector<double>& simVector, const std::vector<dou
 
 // Divide similarity equally between samples that are the closest - to equal 1 in total
 // For a missing donor, assign similarity 1/(N-1) (N the number of samples), and take a corresponding amount away from all the closest ones
-std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::string>& allHaps, const std::string& recipientHap, int thisIndI, int nSamples, std::vector<std::vector<double> >& coancestryM, int tagsSoFar, int numRecipientHaps, const std::vector<int>& nAllelesPerInd) {
+std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::vector<std::string>>& allHaps, const std::string& recipientHap, int thisIndI, int nSamples, std::vector<std::vector<double> >& coancestryM, int tagsSoFar, int numRecipientHaps, const std::vector<int>& nAllelesPerInd) {
     double sumOfCoancestryReceivedSoFar = sumCoancestryReceivedSoFar(nSamples, thisIndI, coancestryM);
     
-    if (std::regex_match(recipientHap, std::regex("N+"))) {
+    if (recipientHap == "") {
         //std::cerr << "recipientHap is N: " << recipientHap << std::endl;
         incrementMissingessMatrixOneHaplotype(missingnessMatrix, thisIndI, numRecipientHaps);
         incrementMissingessMatrixOneHaplotype(localMissingnessMatrix, thisIndI, numRecipientHaps);
@@ -270,7 +270,6 @@ std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::string>&
         }
         alleleToIndividual[i] = ind;
     }
-    
     std::vector<double> simVectorPerInd(nSamples, 0.0);
     std::vector<double> simVectorPerIndNoMissing(nSamples, 0.0);
     std::vector<double> thisMissing(nSamples, 0.0);
@@ -283,9 +282,9 @@ std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::string>&
     for (int i = 0; i < allHaps.size(); i++) {
         if (i != thisIndI) {
             //assert(donorHaps.size() < 3);
+            //std::cerr << "Here: " << i << " " << allHaps[i][0] << std::endl;
             if (nAllelesPerInd[i] == 1) {
-                if (allHaps[i] == "" || allHaps[i] == " " || std::regex_match(allHaps[i], std::regex("N+")) ||
-                    !checkOverlap(recipientHap, allHaps[i])) {
+                if (allHaps[i][0] == "" || !checkOverlap(recipientHap, allHaps[i][0])) {
                     numMissing = numMissing + 1; thisMissing[i] += (1.0/numRecipientHaps);
                     diffVector[diffVectorPos] = missingRandomDiff;
                     thisMissingBasic = thisMissingBasic + (1/(double)(nSamples-1));
@@ -297,15 +296,14 @@ std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::string>&
                         totalToMissing += (coancestryM[thisIndI][i]/sumOfCoancestryReceivedSoFar);
                     }
                 } else {
-                    diffVector[diffVectorPos] = compareSeqsRecipientDonor(recipientHap, allHaps[i]);
+                    diffVector[diffVectorPos] = compareSeqsRecipientDonor(recipientHap, allHaps[i][0]);
                 }
             } else {
-                std::vector<std::string> donorHaps = split(allHaps[i], '/');
+                std::vector<std::string> donorHaps = allHaps[i];
                 assert(nAllelesPerInd[i] == (int)donorHaps.size());
                 //std::cerr << "nAllelesPerInd[i]: " << nAllelesPerInd[i] << " i: " << i << std::endl;
                 for (int j = 0; j < nAllelesPerInd[i]; j++) {
-                    if (std::regex_match(donorHaps[j], std::regex("N+")) ||
-                        !checkOverlap(recipientHap, donorHaps[j])) {
+                    if (donorHaps[j] == "" || !checkOverlap(recipientHap, donorHaps[j])) {
                         numMissing = numMissing + (1.0/donorHaps.size());
                         thisMissing[i] += (1.0/numRecipientHaps)/nAllelesPerInd[i];
                         diffVector[diffVectorPos+j] = missingRandomDiff;
@@ -550,16 +548,18 @@ int paintSqlMain(int argc, char** argv) {
     std::vector<double> missingness(numIndividuals,0.0);
     //std::cerr << "Number of columns: " << fields[11] << std::endl;
     // Lets start going through the tags:
+    //std::clock_t start;  double durationOverall; // timer
+    std::vector<std::string> fields;
     while (getline(*sqlFile, line)) {
+        //start = std::clock();
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end()); // Deal with any left over \r from files prepared on Windows
 
         bool bTooManyAlleles = false;
         
         if (tagsRead % 100 == 0 && tagsRead > 0) {
-            std::cerr << "Processed: " << tagsRead << " tag loci" << std::endl;
+            runtime = ( std::clock() - runStart ) / (double) CLOCKS_PER_SEC;
+            std::cerr << "Processed: " << tagsRead << " tag loci in " << runtime << " seconds(" << runtime/tagsRead << " seconds per RAD locus)" << std::endl;
         }
-        
-        std::vector<std::string> fields;
         
         if (inputType == "Stacks") {
             if (line.length() > 0) {
@@ -600,28 +600,39 @@ int paintSqlMain(int argc, char** argv) {
         // Check if any individual has more alleles than is specified by the --ploidy parameter
         // If that is the case, then output a warning and do not analyse this RAD locus
         // Also gets the number of alleles defined across all individuals
-        std::vector<int> nAllelesPerInd;
+        std::vector<int> nAllelesPerInd(numIndividuals,0); std::regex Ns("N+");
+        std::vector<std::string> haps; std::vector<std::vector<std::string>> allRecipientHaps(numIndividuals,haps);
+        std::vector<int> missingInds(numIndividuals,0); int numMissingInds = 0;
         for (int i = 0; i < numIndividuals; i++) {
-            std::vector<std::string> recipientHaps = split(fields[i], '/');
-            if ((int)recipientHaps.size() >= 1) {
-                nAllelesPerInd.push_back((int)recipientHaps.size());
+            haps = split(fields[i], '/');
+            if ((int)haps.size() >= 1) {
+                nAllelesPerInd[i] = (int)haps.size();
+                int missingAllelesThisInsdividual = 0;
+                for (int j = 0; j < (int)haps.size(); j++) {
+                    if (haps[j] == " " || std::regex_match(haps[j], Ns)) { haps[j] = ""; missingAllelesThisInsdividual++; }
+                }
+                if (missingAllelesThisInsdividual == nAllelesPerInd[i]) { missingInds[i] = 1; numMissingInds++; }
+                allRecipientHaps[i] = haps;
             } else {
-                nAllelesPerInd.push_back(1); // Missing allele ""
+                nAllelesPerInd[i] = 1; // Missing allele ""
+                allRecipientHaps[i].push_back("");
+                missingInds[i] = 1;
             }
-            if (recipientHaps.size() > opt::ploidy) bTooManyAlleles = true;
+            if (haps.size() > opt::ploidy) bTooManyAlleles = true;
         }
         if (bTooManyAlleles) {
             std::cerr << "At least one individual on line " << tagsRead << " has more alleles than specified by the --ploidy parameter; skipping..." << std::endl;
             std::cerr << "Is " << opt::ploidy << "N correct ploidy setting for your organism?" << std::endl;
+        } else if(numMissingInds >= (numIndividuals - 1)) {
+            notInformative++;
+            std::cerr << "Tag " << tagsRead << " is not informative because all (or all but one) individuals have missing data; skipping..." << std::endl;
         } else {
-            std::regex Ns("N+");
-            std::regex NsHet("N+/N+");
-            if (!checkIfTagInformative(fields)) {
-                notInformative++;
-            }
-            checkChr(thisChr, chrTagsAndChunks, numIndividuals);
-            for (int i = 0; i < fields.size(); i++) {
-                if (fields[i] == "" || fields[i] == " " || std::regex_match(fields[i], Ns) || std::regex_match(fields[i], NsHet)) {
+            //if (!checkIfTagInformative(fields)) {
+            //    notInformative++;
+            //}
+            if (opt::bOutputChr) checkChr(thisChr, chrTagsAndChunks, numIndividuals);
+            for (int i = 0; i < numIndividuals; i++) {
+                if (missingInds[i] == 1) {
                     missingness[i]++;
                     incrementMissingessMatrix(missingnessMatrix, i);
                     incrementMissingessMatrix(localMissingnessMatrix, i);
@@ -636,19 +647,17 @@ int paintSqlMain(int argc, char** argv) {
                         incrementMissingRecipientOnCoancestry(localChunkMatrix, i);
                     }
                 } else {
-                    std::vector<std::string> recipientHaps = split(fields[i], '/');
+                    int nRecipientAlleles = (int)allRecipientHaps[i].size(); assert(nRecipientAlleles >= 1);
                     std::vector<double> recipientSimVector;
-                    
-                    int nRecipientAlleles = (int)recipientHaps.size(); assert(nRecipientAlleles >= 1);
                     
                     // std::cerr << "recipientHaps.size(): " << recipientHaps.size() << std::endl;
                      // Calculate the coancestry values for this tag
                     if (nRecipientAlleles == 1) {
-                        recipientSimVector = calculateSimilarityAnyPloidy(fields, recipientHaps[0], i, numIndividuals,outChunksMatrix,tagsRead,nRecipientAlleles,nAllelesPerInd);
+                        recipientSimVector = calculateSimilarityAnyPloidy(allRecipientHaps, allRecipientHaps[i][0], i, numIndividuals,outChunksMatrix,tagsRead,nRecipientAlleles,nAllelesPerInd);
                     } else {
                         std::vector<std::vector<double> > recipientSimVectors;
                         for (int h_i = 0; h_i < nRecipientAlleles; h_i++) {
-                            std::vector<double> thisRecipientSimVector = calculateSimilarityAnyPloidy(fields, recipientHaps[h_i], i, numIndividuals,outChunksMatrix, tagsRead, nRecipientAlleles,nAllelesPerInd);
+                            std::vector<double> thisRecipientSimVector = calculateSimilarityAnyPloidy(allRecipientHaps, allRecipientHaps[i][h_i], i, numIndividuals,outChunksMatrix, tagsRead, nRecipientAlleles,nAllelesPerInd);
                             recipientSimVectors.push_back(thisRecipientSimVector);
                         }
                         for (int j = 0; j < numIndividuals; j++) {
@@ -670,7 +679,7 @@ int paintSqlMain(int argc, char** argv) {
                         outChunksMatrix[i][j] = outChunksMatrix[i][j] + recipientSimVector[j];
                         localChunkMatrix[i][j] = localChunkMatrix[i][j] + recipientSimVector[j];
                     }
-                    addChunksToChr(thisChr, chrTagsAndChunks, recipientSimVector, numIndividuals, i);
+                    if (opt::bOutputChr) addChunksToChr(thisChr, chrTagsAndChunks, recipientSimVector, numIndividuals, i);
                 }
             }
         }
@@ -721,6 +730,8 @@ int paintSqlMain(int argc, char** argv) {
                 std::fill(localChunksNoMissing[i].begin(), localChunksNoMissing[i].end(), 0.0);
             }
         }
+       // durationOverall = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+       // std::cerr << "Processed " << tagsRead << "th variant in " << durationOverall << "secs" << std::endl;
     }
     // Add all the missing data:
     std::vector<std::vector<double> > chunksNoMissingRescaled; initialize_matrix_double(chunksNoMissingRescaled, numIndividuals);
