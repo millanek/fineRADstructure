@@ -366,8 +366,8 @@ std::vector<double> calculateSimilarityAnyPloidy(const std::vector<std::vector<s
         double addThisAlleleNoMissing = addPerIndividualNoMissing * shareClosest;
         simVectorPerInd[ind] += addThisAllele;
         simVectorPerIndNoMissing[ind] += addThisAlleleNoMissing;
-        outChunksNoMissing[thisIndI][ind] += addThisAlleleNoMissing;
-        localChunksNoMissing[thisIndI][ind] += addThisAlleleNoMissing;
+        outChunksNoMissing[thisIndI][ind] += addThisAlleleNoMissing/numRecipientHaps;
+        localChunksNoMissing[thisIndI][ind] += addThisAlleleNoMissing/numRecipientHaps;
     }
     
     // Final sanity checks for the results
