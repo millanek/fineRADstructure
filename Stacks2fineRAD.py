@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.decomposition import PCA as sklearnPCA
 import argparse as ap
+import re
 
 #parse arguments
 parser = ap.ArgumentParser()
@@ -28,6 +29,7 @@ triallelic = 0
 invariants = 0
 too_many_snps = 0
 indels = 0
+allMissing = 0
 
 #set lists
 num_alleles_list = []
@@ -39,12 +41,21 @@ for line in input_file.readlines():
 	#replace missing data value from "-" to ""
 	line = line.replace('-','')
 	row = line.rstrip().split('\t')
-	if row[0] == 'Catalog ID':
+        #print row[0]
+	if row[0] == 'Catalog ID' or row[0] == '# Catalog Locus ID':
 		header = row
 		samples = header[2:len(header)]
 		output.write(line)
 	else:
-		#separate genotypes into alleles
+                # deal with this kind of missing data 
+                row = ['' if i=='/' else i for i in row]
+		Nmiss = re.compile('N/N')
+		row = ['' if Nmiss.match(i) != None else i for i in row]			
+                multNmiss = re.compile('N+/N+')
+                row = ['' if multNmiss.match(i) != None else i for i in row]
+                line = multNmiss.sub('',line)
+                # print row
+                #separate genotypes into alleles
 		row = [i.split('/') for i in row]
 		#drop loci if more than 2 alleles are present (likely already filtered)
 		if any(len(i) > 2 for i in row):
@@ -55,14 +66,17 @@ for line in input_file.readlines():
 			num_alleles_list.append(1)
 			num_snp_list.append(0)
 			cat_id_list.append(row[0])
-		else:
+	       	elif all(i == [""] for i in row[2:len(row)]):
+                        # all missing
+                        allMissing += 1
+                else:
 			genodata = row[2:len(row)]
 			all_alleles = [item for sublist in genodata for item in sublist]
 			if any(len(ind) > max_snps for ind in all_alleles): #drop loci if they have more than max_snps allowed
 				too_many_snps += 1
 			#drop loci with "N" likely indels but we need to check
-			elif any('N' in ind for ind in all_alleles):
-				indels += 1
+			#elif any('N' in ind for ind in all_alleles):
+			#	indels += 1
 
 			else:
 				alleles_set = set([allele for allele in all_alleles if allele != ''])
@@ -74,7 +88,7 @@ output.close()
 input_file.close()
 
 print 'Loci filtered sequentially as follows:'
-print 'Triallelic =', triallelic, '; Invariants =', invariants, '; More than', max_snps, 'snps =', too_many_snps, '; Indels =', indels
+print 'Triallelic =', triallelic, '; Invariants =', invariants, '; allMissing =', allMissing,'; More than', max_snps, 'snps =', too_many_snps, '; Indels =', indels
 print '---'
 print 'Filtered loci for all samples saved to '+args.infile+'.filtered'
 print '---'
