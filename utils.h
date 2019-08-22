@@ -86,7 +86,7 @@ template <class T> void print_matrix(T matrix, std::ofstream& outFile) {
 }
 
 // Print an arbitrary matrix (vector of vectors)
-template <class T> void print_matrix_wNames(T matrix, std::ofstream& outFile, std::vector<std::string>& names) {
+template <class T> void print_matrix_wNames(T matrix, std::ostream& outFile, std::vector<std::string>& names) {
     for (int i = 0; i < matrix.size(); i++) {
         outFile << names[i] << "\t";
         for (int j = 0; j < matrix[i].size(); j++) {
