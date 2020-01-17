@@ -53,7 +53,9 @@ for line in input_file.readlines():
 		row = ['' if Nmiss.match(i) != None else i for i in row]			
                 multNmiss = re.compile('N+/N+')
                 row = ['' if multNmiss.match(i) != None else i for i in row]
-                line = multNmiss.sub('',line)
+                # line = multNmiss.sub('',line)
+                multNmiss2 = re.compile('\tN+/N+\t')
+                line = multNmiss2.sub('\t\t',line)
                 # print row
                 #separate genotypes into alleles
 		row = [i.split('/') for i in row]
