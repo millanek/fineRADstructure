@@ -48,14 +48,14 @@ for line in input_file.readlines():
 		output.write(line)
 	else:
                 # deal with this kind of missing data 
-                row = ['' if i=='/' else i for i in row]
+		row = ['' if i=='/' else i for i in row]
 		Nmiss = re.compile('N/N')
 		row = ['' if Nmiss.match(i) != None else i for i in row]			
-                multNmiss = re.compile('N+/N+')
-                row = ['' if multNmiss.match(i) != None else i for i in row]
+		multNmiss = re.compile('N+/N+')
+		row = ['' if multNmiss.match(i) != None else i for i in row]
                 # line = multNmiss.sub('',line)
-                multNmiss2 = re.compile('\tN+/N+\t')
-                line = multNmiss2.sub('\t\t',line)
+		multNmiss2 = re.compile('\tN+/N+\t')
+		line = multNmiss2.sub('\t\t',line)
                 # print row
                 #separate genotypes into alleles
 		row = [i.split('/') for i in row]
@@ -68,10 +68,10 @@ for line in input_file.readlines():
 			num_alleles_list.append(1)
 			num_snp_list.append(0)
 			cat_id_list.append(row[0])
-	       	elif all(i == [""] for i in row[2:len(row)]):
+		elif all(i == [""] for i in row[2:len(row)]):
                         # all missing
-                        allMissing += 1
-                else:
+			allMissing += 1
+		else:
 			genodata = row[2:len(row)]
 			all_alleles = [item for sublist in genodata for item in sublist]
 			if any(len(ind) > max_snps for ind in all_alleles): #drop loci if they have more than max_snps allowed
@@ -89,11 +89,11 @@ for line in input_file.readlines():
 output.close()
 input_file.close()
 
-print 'Loci filtered sequentially as follows:'
-print 'Triallelic =', triallelic, '; Invariants =', invariants, '; allMissing =', allMissing,'; More than', max_snps, 'snps =', too_many_snps, '; Indels =', indels
-print '---'
-print 'Filtered loci for all samples saved to '+args.infile+'.filtered'
-print '---'
+print('Loci filtered sequentially as follows:')
+print('Triallelic =', triallelic, '; Invariants =', invariants, '; allMissing =', allMissing,'; More than', max_snps, 'snps =', too_many_snps, '; Indels =', indels)
+print('---')
+print('Filtered loci for all samples saved to '+args.infile+'.filtered')
+print('---')
 
 #plot distribution of number of alleles across loci 
 plt.ioff()
@@ -109,8 +109,8 @@ plt.title(str(len(num_alleles_list))+' loci analyzed (including invariants)')
 missing_plot_file = args.infile+'.alleles.pdf'
 fig.savefig(missing_plot_file,bbox_inches='tight')
 plt.close()
-print 'Distribution of alleles per locus plotted in '+args.infile+'.alleles.pdf'
-print '---'
+print('Distribution of alleles per locus plotted in '+args.infile+'.alleles.pdf')
+print('---')
 
 #plot distribution of number of snps across loci
 plt.ioff()
@@ -126,16 +126,16 @@ plt.title(str(len(num_snp_list))+' loci analyzed (including invariants)')
 missing_plot_file = args.infile+'.snps.pdf'
 fig.savefig(missing_plot_file,bbox_inches='tight')
 plt.close()
-print 'Distribution of SNPs per locus plotted in '+args.infile+'.snps.pdf'
-print '---'
+print('Distribution of SNPs per locus plotted in '+args.infile+'.snps.pdf')
+print('---')
 
 #Read the output file to plot missing data per sample and PCA of missing data and prepare the fineRADpainter input files
 data = pd.read_csv(output_file, sep='\t', header=0, usecols=samples)
 
 fineRADpainter_input = args.infile+'.fineRADpainter.lociFilt.txt'
 data.to_csv(fineRADpainter_input, header=True, sep='\t', index=False)
-print 'FineRADpainter input file with filtered loci saved to '+args.infile+'.fineRADpainter.lociFilt.txt'
-print '---'
+print('FineRADpainter input file with filtered loci saved to '+args.infile+'.fineRADpainter.lociFilt.txt')
+print('---')
 
 num_row = data.shape[0]
 missing_data = data.isnull().sum().apply(lambda x: round(x*1.0/num_row*100,1))
@@ -150,8 +150,8 @@ plt.title(str(num_row)+' loci analyzed (excluding invariants)')
 missing_plot_file = args.infile+'.missingdata.pdf'
 fig.savefig(missing_plot_file,bbox_inches='tight')
 plt.close()
-print 'Missing data per sample plotted in '+args.infile+'.missingdata.pdf'
-print '---'
+print('Missing data per sample plotted in '+args.infile+'.missingdata.pdf')
+print('---')
 
 fact = 100/args.max_missing_data
 
@@ -162,8 +162,8 @@ sklearn_pca20.fit(data_20_01)
 
 filtered_missingX_file = args.infile+'.fineRADpainter.lociFilt.samples'+str(args.max_missing_data)+'%missFilt.txt'
 data.dropna(thresh=thr, axis=1).to_csv(filtered_missingX_file, header=True, sep='\t', index=False)
-print 'FineRADpainter input file with filtered loci and filtered samples with max missing loci =',str(args.max_missing_data),'% saved to '+args.infile+'.fineRADpainter.filt'+str(args.max_missing_data)+'%Missing'
-print '---'
+print('FineRADpainter input file with filtered loci and filtered samples with max missing loci =',str(args.max_missing_data),'% saved to '+args.infile+'.fineRADpainter.filt'+str(args.max_missing_data)+'%Missing')
+print('---')
 
 plt.ioff()
 fig = plt.figure()
@@ -180,8 +180,8 @@ plt.title('PCA of missing data')
 missing_plot_file = args.infile+'.missingdataPCA.pdf'
 fig.savefig(missing_plot_file,bbox_inches='tight')
 plt.close()
-print 'PCA of missing data plotted in '+args.infile+'.missingdataPCA.pdf'
-print '---'
+print('PCA of missing data plotted in '+args.infile+'.missingdataPCA.pdf')
+print('---')
 
 
 
