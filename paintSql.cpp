@@ -733,6 +733,7 @@ int paintSqlMain(int argc, char** argv) {
        // durationOverall = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
        // std::cerr << "Processed " << tagsRead << "th variant in " << durationOverall << "secs" << std::endl;
     }
+    
     // Add all the missing data:
     std::vector<std::vector<double> > chunksNoMissingRescaled; initialize_matrix_double(chunksNoMissingRescaled, numIndividuals);
     for (int i = 0; i < missingnessMatrix.size(); i++) {
@@ -749,8 +750,8 @@ int paintSqlMain(int argc, char** argv) {
             outChunksNoMissing[i][j] = (chunksNoMissingRescaled[i][j]/vector_sum(chunksNoMissingRescaled[i])) * tagsRead;
         }
     }
-    std::cerr << individuals[0] << "\t" << vector_sum(chunksNoMissingRescaled[0]) << std::endl;
-    std::cerr << individuals[0] << "\t" << vector_sum(outChunksNoMissing[0]) << std::endl;
+    //std::cerr << individuals[0] << "\t" << vector_sum(chunksNoMissingRescaled[0]) << std::endl;
+    //std::cerr << individuals[0] << "\t" << vector_sum(outChunksNoMissing[0]) << std::endl;
     
     *outMissingnessMatrixFile << "Recipient" << "\t"; print_vector(individuals, *outMissingnessMatrixFile);
     print_matrix_wNames(missingnessMatrix, *outMissingnessMatrixFile,individuals);
@@ -760,10 +761,14 @@ int paintSqlMain(int argc, char** argv) {
     // Print missingess:
     for (int i = 0; i < missingness.size(); i++) {
         missingness[i] = missingness[i]/tagsRead;
+        if (missingness[i] > 0.9) {
+            std::cerr << "WARNING: The sample " << individuals[i] << " has more than 90% missing data. You may want to exclude this sample from the analysis or adjust your filtering." << std::endl;
+        }
     }
     std::cerr << "Printing missingness per individual to: " << outMissingnessFileName << std::endl;
     print_vector(individuals, *outMissingnessFile);
     print_vector(missingness, *outMissingnessFile);
+    
     
     // Estimate theoretical variances:
     double R_i = tagsRead/blockSize;

@@ -120,7 +120,9 @@ Inf1 GlobalReadTree(string filename,Data *d, double alpha,double corfactor,doubl
 InfMCMC GlobalRunMCMC(Data *d, State *initstate,ostream *os,long burnin,long additional,long thinin,string comment,
 		      int datainference,Data *dlength,double pcaprob,bool fixK,bool verbose)
 {
+
   InfMCMC* infMCMC=new InfMCMC(d,initstate,dlength,datainference,pcaprob,verbose);
+
     if(fixK) infMCMC->fixK();
   try{
     infMCMC->exportXmlHead(os,initstate->getCorfactor(),burnin,additional,thinin);
@@ -128,7 +130,9 @@ InfMCMC GlobalRunMCMC(Data *d, State *initstate,ostream *os,long burnin,long add
 	if(verbose==1) cout<<"BURN IN PHASE"<<endl;
 	infMCMC->metropolis(0,burnin);
 	if(verbose==1) cout<<"MCMC PHASE"<<endl;
+
 	infMCMC->resetCounters();	
+
 	for(long c1=0;c1<additional;c1++){infMCMC->metropolis(c1,1,thinin,os,additional);}
 	if(additional % thinin==0) infMCMC->exportXmlIter(os,additional);
 
@@ -137,7 +141,9 @@ InfMCMC GlobalRunMCMC(Data *d, State *initstate,ostream *os,long burnin,long add
     throw(x);
   }	
 	//infMCMC.metropolis(0,additional,thinin,os);
+
   return(*infMCMC);
+
 }
 
 bool getHeader(string filename, double &cval,long &burnin, long &mcmclength,long &cvalstr, string &datafilestr){
