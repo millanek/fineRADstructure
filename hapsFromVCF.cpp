@@ -18,17 +18,19 @@ static const char *HAPS_USAGE_MESSAGE =
 "Generate a co-ancestry matrix from RAD data\n"
 "\n"
 "       -h, --help                              display this help and exit\n"
-"       -H,   --het-treatment <r|p>             r: assign het bases randomly (default); p: use the phase information in the VCF\n"
+"       -H,   --het-treatment <r|p>             r: assign the first het base randomly, subsequent as Ns (default); p: use the phase information in the VCF\n"
+"       -m,   --maxNproportion                  maximum proportion of N bases at a locus before it is set to missing entirely (default = 0.5)\n"
 "       -F MIN_F                                minimum acceptable inbreeding coefficient (default: F >= -0.3)\n"
 "\n\n"
 "\nReport bugs to " BUGREPORT "\n\n";
 
 
 // Options
-static const char* shortopts = "hn:H:F:";
+static const char* shortopts = "hn:H:F:m:";
 static const struct option longopts[] = {
     { "run-name",   required_argument, NULL, 'n' },
     { "het-treatment",   required_argument, NULL, 'H' },
+    { "maxNproportion",   required_argument, NULL, 'm' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -39,20 +41,24 @@ namespace opt
     static char hetTreatment = 'r';
     static bool bOutputChr = false;
     static double minF = -0.3;
+    static double maxNs = 0.5;
 }
 
 class VCFprocessCounts {
 public:
     VCFprocessCounts(size_t ns) : numLoci(0), missingDueToUnphasedHets(0), missingLociNum(0),
-                                processedVariantCounter(0), usedVariantCounter(0) {
+                                processedVariantCounter(0), usedVariantCounter(0), missingDueToTooManyNs(0) {
         numSamples = ns;
         hetCounters.resize(numSamples);
+        Ncounters.resize(numSamples);
     };
     
     int numLoci; int missingDueToUnphasedHets; int missingLociNum;
+    int missingDueToTooManyNs;
     unsigned int processedVariantCounter; unsigned int usedVariantCounter;
     size_t numSamples;
     std::vector<int> hetCounters;
+    std::vector<int> Ncounters;
 };
 
 class Alleles {
@@ -75,10 +81,19 @@ void printAllelesIfNotMissing(Alleles* alleles, VCFprocessCounts* counts, std::r
             if (std::regex_match(allelesH1H2[i], NsHet)) {
                 allelesH1H2[i] = ""; counts->missingLociNum++;
                 numMissingAlleles++;
-            } else if(counts->hetCounters[i] > 1 && opt::hetTreatment == 'r') {
-                allelesH1H2[i] = ""; counts->missingDueToUnphasedHets++;
+            } else if(counts->Ncounters[i] > (opt::maxNs*alleles->H1[i].length()*2)) {
+                //std::cerr << "allelesH1H2[i]: " << allelesH1H2[i] << std::endl;
+                //std::cerr << "counts->Ncounters[i]: " << counts->Ncounters[i] << std::endl;
+                //std::cerr << "(0.5*alleles->H1[i].length()*2): " << (0.5*alleles->H1[i].length()*2) << std::endl;
+                //exit(1);
+                allelesH1H2[i] = ""; counts->missingDueToTooManyNs++;
                 numMissingAlleles++;
             }
+            
+            //} else if(counts->hetCounters[i] > 1 && opt::hetTreatment == 'r') {
+            //    allelesH1H2[i] = ""; counts->missingDueToUnphasedHets++;
+            //    numMissingAlleles++;
+            // }
         } else {
             allelesH1H2.push_back("");
             numMissingAlleles++;
@@ -116,7 +131,7 @@ int VCFhapsMain(int argc, char** argv) {
             alleles = new Alleles(ns); counts = new VCFprocessCounts(ns);
             // Initialize vectors
             for (std::vector<string>::size_type i = 0; i != counts->numSamples; i++) {
-                alleles->H1[i] = ""; alleles->H2[i] = ""; counts->hetCounters[i] = 0;
+                alleles->H1[i] = ""; alleles->H2[i] = ""; counts->hetCounters[i] = 0; counts->Ncounters[i] = 0;
             }
             // Get sample names
             for (std::vector<std::string>::size_type i = NUM_NON_GENOTYPE_COLUMNS; i != fields.size(); i++) {
@@ -132,7 +147,7 @@ int VCFhapsMain(int argc, char** argv) {
                    // std::cerr << currentScaffoldNum << " processed. Total variants: " << processedVariantCounter << std::endl;
                     printAllelesIfNotMissing(alleles,counts,NsHet);
                     for (std::vector<string>::size_type i = 0; i != counts->numSamples; i++) {
-                        alleles->H1[i] = ""; alleles->H2[i] = ""; counts->hetCounters[i] = 0;
+                        alleles->H1[i] = ""; alleles->H2[i] = ""; counts->hetCounters[i] = 0; counts->Ncounters[i] = 0;
                     }
                 }
                 // get to the next "chromosome"
@@ -185,6 +200,13 @@ int VCFhapsMain(int argc, char** argv) {
 
                         for (std::vector<std::string>::size_type i = 0; i != counts->numSamples; i++) {
                             alleles->H1[i].append(appendVector[i]); alleles->H2[i].append(appendVectorH2[i]);
+                            if (appendVector[i] == "N") {
+                                counts->Ncounters[i]++;
+                            }
+                            if (appendVectorH2[i] == "N") {
+                                counts->Ncounters[i]++;
+                            }
+                            
                         }
                         counts->usedVariantCounter++;
                         currentCoord = atoi(fields[1].c_str());
@@ -210,9 +232,10 @@ int VCFhapsMain(int argc, char** argv) {
   //  std::cerr << currentScaffoldNum << " processed. Total variants: " << processedVariantCounter << std::endl;
     printAllelesIfNotMissing(alleles,counts,NsHet);
     
-    int missingTotal = counts->missingLociNum + counts->missingDueToUnphasedHets;
+    int missingTotal = counts->missingLociNum + counts->missingDueToUnphasedHets + counts->missingDueToTooManyNs;
     std::cerr << "Missing alleles total: " << missingTotal << "; " << (double)missingTotal/counts->numLoci << "% of total alleles"<< std::endl;
     std::cerr << "Due to missing genotypes: " << counts->missingLociNum << "; " << (double)counts->missingLociNum/missingTotal << "% of missing" << std::endl;
+    std::cerr << "Due to too many Ns in the individual: " << counts->missingDueToTooManyNs << "; " << (double)counts->missingDueToTooManyNs/missingTotal << "% of missing" << std::endl;
     std::cerr << "Due to multiple unphased hets: " << counts->missingDueToUnphasedHets << "; " << (double)counts->missingDueToUnphasedHets/missingTotal << "% of missing" << std::endl;
     std::cerr << "DONE!" << std::endl;
     return 0;
@@ -229,6 +252,7 @@ void parseVCFoptions(int argc, char** argv) {
             case 'n': arg >> opt::runName; break;
             case '?': die = true; break;
             case 'F': arg >> opt::minF; break;
+            case 'm': arg >> opt::maxNs; break;
             case 'h': std::cout << HAPS_USAGE_MESSAGE;
                 exit(EXIT_SUCCESS);
         }
