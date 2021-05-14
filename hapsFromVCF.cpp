@@ -19,18 +19,20 @@ static const char *HAPS_USAGE_MESSAGE =
 "\n"
 "       -h, --help                              display this help and exit\n"
 "       -H,   --het-treatment <r|p>             r: assign the first het base randomly, subsequent as Ns (default); p: use the phase information in the VCF\n"
-"       -m,   --maxNproportion                  maximum proportion of N bases at a locus before it is set to missing entirely (default = 0.5)\n"
+"       -m,   --maxNproportion <0.5>            maximum proportion of N bases at a locus before it is set to missing entirely (default = 0.5)\n"
+"       -p,   --printNproportion FILE           print the proportion of Ns for each individual at each locus\n"
 "       -F MIN_F                                minimum acceptable inbreeding coefficient (default: F >= -0.3)\n"
 "\n\n"
 "\nReport bugs to " BUGREPORT "\n\n";
 
 
 // Options
-static const char* shortopts = "hn:H:F:m:";
+static const char* shortopts = "hn:H:F:m:p:";
 static const struct option longopts[] = {
     { "run-name",   required_argument, NULL, 'n' },
     { "het-treatment",   required_argument, NULL, 'H' },
     { "maxNproportion",   required_argument, NULL, 'm' },
+    { "printNproportion",   required_argument, NULL, 'p' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -38,6 +40,7 @@ namespace opt
 {
     static string runName = "";
     static string VCFfileName = "";
+    static string NproportionFileName = "";
     static char hetTreatment = 'r';
     static bool bOutputChr = false;
     static double minF = -0.3;
@@ -72,16 +75,19 @@ public:
 
 
 
-void printAllelesIfNotMissing(Alleles* alleles, VCFprocessCounts* counts, std::regex NsHet) {
+void printAllelesIfNotMissing(Alleles* alleles, VCFprocessCounts* counts, std::regex NsHet, std::ofstream* nProportionOutFile) {
     int numAlleles = (int)alleles->H1.size(); std::vector<string> allelesH1H2;
     int numMissingAlleles = 0;
+    std::vector<double> Nproportions;
     for (std::vector<string>::size_type i = 0; i != numAlleles; i++) {
         if (alleles->H1[i] != "") {
+            double Nproportion = (double)counts->Ncounters[i]/(alleles->H1[i].length()*2);
+            Nproportions.push_back(Nproportion);
             allelesH1H2.push_back(alleles->H1[i] + "/" + alleles->H2[i]);
             if (std::regex_match(allelesH1H2[i], NsHet)) {
                 allelesH1H2[i] = ""; counts->missingLociNum++;
                 numMissingAlleles++;
-            } else if(counts->Ncounters[i] > (opt::maxNs*alleles->H1[i].length()*2)) {
+            } else if(Nproportion > opt::maxNs) {
                 //std::cerr << "allelesH1H2[i]: " << allelesH1H2[i] << std::endl;
                 //std::cerr << "counts->Ncounters[i]: " << counts->Ncounters[i] << std::endl;
                 //std::cerr << "(0.5*alleles->H1[i].length()*2): " << (0.5*alleles->H1[i].length()*2) << std::endl;
@@ -89,7 +95,6 @@ void printAllelesIfNotMissing(Alleles* alleles, VCFprocessCounts* counts, std::r
                 allelesH1H2[i] = ""; counts->missingDueToTooManyNs++;
                 numMissingAlleles++;
             }
-            
             //} else if(counts->hetCounters[i] > 1 && opt::hetTreatment == 'r') {
             //    allelesH1H2[i] = ""; counts->missingDueToUnphasedHets++;
             //    numMissingAlleles++;
@@ -101,6 +106,9 @@ void printAllelesIfNotMissing(Alleles* alleles, VCFprocessCounts* counts, std::r
     }
     if (numAlleles > numMissingAlleles) {
         print_vector_stream(allelesH1H2,std::cout);
+        if (opt::NproportionFileName != "") {
+            print_vector_stream(Nproportions,*nProportionOutFile);
+        }
     }
     counts->numLoci = counts->numLoci + (int)counts->numSamples;
 }
@@ -115,6 +123,11 @@ int VCFhapsMain(int argc, char** argv) {
     
     // Open connections to read from the vcf and reference genome files
     std::istream* vcfFile = createReader(opt::VCFfileName.c_str());
+    
+    std::ofstream* nProportionOutFile;
+    if (opt::NproportionFileName != "") {
+        nProportionOutFile = new std::ofstream(opt::NproportionFileName);
+    }
     
     string currentScaffoldNum = "";
     int currentCoord = 0;
@@ -138,6 +151,10 @@ int VCFhapsMain(int argc, char** argv) {
                 sampleNames.push_back(fields[i]);
             }
             print_vector_stream(sampleNames, std::cout);
+            if (opt::NproportionFileName != "") {
+                print_vector_stream(sampleNames,*nProportionOutFile);
+            }
+            
         } else {
             counts->processedVariantCounter++;
             std::vector<std::string> fields = split(line, '\t');
@@ -145,7 +162,7 @@ int VCFhapsMain(int argc, char** argv) {
             if (fields[0] != currentScaffoldNum || atoi(fields[1].c_str()) - maxLocusGapBp > currentCoord) {
                 if (currentScaffoldNum != "") {
                    // std::cerr << currentScaffoldNum << " processed. Total variants: " << processedVariantCounter << std::endl;
-                    printAllelesIfNotMissing(alleles,counts,NsHet);
+                    printAllelesIfNotMissing(alleles,counts,NsHet,nProportionOutFile);
                     for (std::vector<string>::size_type i = 0; i != counts->numSamples; i++) {
                         alleles->H1[i] = ""; alleles->H2[i] = ""; counts->hetCounters[i] = 0; counts->Ncounters[i] = 0;
                     }
@@ -230,7 +247,7 @@ int VCFhapsMain(int argc, char** argv) {
     }
     // Also the final chr
   //  std::cerr << currentScaffoldNum << " processed. Total variants: " << processedVariantCounter << std::endl;
-    printAllelesIfNotMissing(alleles,counts,NsHet);
+    printAllelesIfNotMissing(alleles,counts,NsHet,nProportionOutFile);
     
     int missingTotal = counts->missingLociNum + counts->missingDueToUnphasedHets + counts->missingDueToTooManyNs;
     std::cerr << "Missing alleles total: " << missingTotal << "; " << (double)missingTotal/counts->numLoci << "% of total alleles"<< std::endl;
@@ -253,6 +270,7 @@ void parseVCFoptions(int argc, char** argv) {
             case '?': die = true; break;
             case 'F': arg >> opt::minF; break;
             case 'm': arg >> opt::maxNs; break;
+            case 'p': arg >> opt::NproportionFileName; break;
             case 'h': std::cout << HAPS_USAGE_MESSAGE;
                 exit(EXIT_SUCCESS);
         }

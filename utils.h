@@ -33,7 +33,7 @@ using std::string;
 #define BUGREPORT "milan.malinsky@unibas.ch"
 #define GZIP_EXT ".gz"
 #define THIS_AUTHOR "Milan Malinsky"
-#define V "0.3.3 r110"
+#define V "0.3.3 r111"
 #define GZIP_EXT ".gz"
 
 // VCF format constant
